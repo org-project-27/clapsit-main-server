@@ -1,0 +1,18 @@
+[
+    {
+      "id": 1,
+      "created_for": "access_token",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJpYXQiOjE3MTk0MjQ4MjYsImV4cCI6MTcyMDAyOTYyNn0.lIxFzlynq3TyprS8UDnS2-MKZcnUVibZO7wi62Ci-v4",
+      "payload": {"user_id": 1},
+      "expired_in": "2025-07-03T22:00:26+04:00",
+      "owner_id": 1
+    },
+    {
+      "id": 2,
+      "created_for": "refresh_token",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJhY2Nlc3NfdG9rZW5fc2Vzc2lvbiI6MSwiaWF0IjoxNzE5NDI0ODI2LCJleHAiOjE3MjIwMTY4MjZ9.3wqcZJlg2-CwFRHceYuQ4w_9un--5-EeBpNoAn2odgQ",
+      "payload": {"user_id": 1, "access_token_session": 1},
+      "expired_in": "2025-07-26T22:00:26+04:00",
+      "owner_id": 1
+    }
+]

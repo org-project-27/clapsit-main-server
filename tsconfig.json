@@ -1,7 +1,93 @@
 {
-  "extends": "@adonisjs/tsconfig/tsconfig.app.json",
   "compilerOptions": {
-    "rootDir": "./",
-    "outDir": "./build"
-  }
+    "forceConsistentCasingInFileNames": true,
+    "target": "ES2020",
+    "module": "Node16",
+    "moduleResolution": "node16",
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "useDefineForClassFields": true,
+    "strict": true,
+    "noImplicitThis": true,
+    "esModuleInterop": true,
+    "types": [],
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "allowSyntheticDefaultImports": true,
+    "lib": [
+      "ES2021", "DOM"
+    ],
+    "paths": {
+      "~": [
+        "./src"
+      ],
+      "~/*": [
+        "./src/*"
+      ],
+      "@": [
+        "./src"
+      ],
+      "@/*": [
+        "./src/*"
+      ],
+      "~~": [
+        "./src"
+      ],
+      "~~/*": [
+        "./src/*"
+      ],
+      "@@": [
+        "./src"
+      ],
+      "@@/*": [
+        "./src/*"
+      ],
+      "#controllers": [
+        "./src/controllers"
+      ],
+      "#controllers/*": [
+        "./src/controllers/*"
+      ],
+      "#routes": [
+        "./src/routes"
+      ],
+      "#routes/*": [
+        "./src/routes/*"
+      ],
+      "#assets": [
+        "./src/assets"
+      ],
+      "#assets/*": [
+        "./src/assets/*"
+      ],
+      "#helpers": [
+        "./src/assets/helpers"
+      ],
+      "#helpers/*": [
+        "./src/assets/helpers/*"
+      ],
+      "#types": [
+        "./src/assets/types"
+      ],
+      "#types/*": [
+        "./src/assets/types/*"
+      ],
+      "#public": [
+        "./src/public"
+      ],
+      "#public/*": [
+        "./src/public/*"
+      ]
+    }
+  },
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "prisma"
+  ]
 }

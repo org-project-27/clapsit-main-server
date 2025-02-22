@@ -1,25 +1,7 @@
-# Dependencies and AdonisJS build
-node_modules
-build
-tmp
-
-# Secrets
+/node_modules/
 .env
-.env.local
-.env.production.local
-.env.development.local
-
-# Frontend assets compiled code
-public/assets
-
-# Build tools specific
-npm-debug.log
-yarn-error.log
-
-# Editors specific
-.fleet
-.idea
-.vscode
-
-# Platform specific
-.DS_Store
+sendgrid.env
+/src/bin/logs/
+/src/public/uploads/
+/cdn/
+/dist/
