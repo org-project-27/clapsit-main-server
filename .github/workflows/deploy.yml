@@ -1,0 +1,61 @@
+name: Deploy clapsit-main-server
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Create GitHub deployment
+        id: create_deployment
+        uses: octokit/request-action@v2.x
+        with:
+          route: POST /repos/${{ github.repository_owner }}/${{ github.event.repository.name }}/deployments
+          ref: ${{ github.sha }}
+          required_contexts: '[]'
+          environment: 'Production'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      
+      - name: Deploy to Server
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+            cd ~/websites/clapsit.com/clapsit-main-server
+            pm2 stop clapsit-main-server
+            rm -rf ./dist
+            git checkout main
+            git pull
+            npm install
+            pm2 start ecosystem.config.cjs
+            pm2 save
+            pm2 startup
+          EOF
+      
+      - name: Update deployment status to success
+        if: success()
+        uses: octokit/request-action@v2.x
+        with:
+          route: POST /repos/${{ github.repository_owner }}/${{ github.event.repository.name }}/deployments/${{ fromJson(steps.create_deployment.outputs.data).id }}/statuses
+          state: 'success'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update deployment status to failure
+        if: failure()
+        uses: octokit/request-action@v2.x
+        with:
+          route: POST /repos/${{ github.repository_owner }}/${{ github.event.repository.name }}/deployments/${{ fromJson(steps.create_deployment.outputs.data).id }}/statuses
+          state: 'failure'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
