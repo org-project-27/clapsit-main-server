@@ -64,6 +64,7 @@ This project uses [Prisma](https://www.prisma.io/) for database management. The 
 - `db:deploy`: Applies all pending migrations to the database.
 - `db:migrate`: Creates a new migration based on the changes in your Prisma schema and applies it.
 - `db:reset`: Resets the database by rolling back and reapplying all migrations.
+- `db:seed`: Set seeds to database.
 
 Ensure you have configured your database connection string in the `.env` file.
 
