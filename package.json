@@ -13,7 +13,8 @@
     "db:reset": "npx prisma migrate reset",
     "db:seed": "ts-node prisma/seed.ts",
     "db:studio": "npx prisma studio",
-    "build": "tsc && tsc-alias"
+    "build": "tsc && tsc-alias",
+    "deploy": "tsc && tsc-alias; node dist/bin/www.js"
   },
   "keywords": [],
   "author": "Vugar Safarzada",
