@@ -32,6 +32,7 @@ The following scripts are available for managing and running the application:
 - `npm run db:deploy`: Deploy the database migrations using Prisma.
 - `npm run db:migrate`: Run the Prisma migrations in development mode.
 - `npm run db:reset`: Reset the database using Prisma.
+- `db:seed`: Set seeds to database.
 
 ## Project Structure
 
