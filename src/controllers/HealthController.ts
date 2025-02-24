@@ -14,8 +14,7 @@ class HealthController extends Controller {
 
     healthCheck = async () => {
         try {
-            // #TODO: Add your health check logic here
-            const availabelitySwitch = true;
+            const availabelitySwitch = true; // #TODO: Add your health check logic here
             const isDataBaseAvailable = await this.database.$queryRaw`SELECT 1`;
             if(availabelitySwitch && isDataBaseAvailable){
                 $logged(
@@ -45,7 +44,7 @@ class HealthController extends Controller {
                     {},
                     this.response,
                     apiMessageKeys.SOMETHING_WENT_WRONG,
-                    statusCodes.INTERNAL_SERVER_ERROR
+                    statusCodes.SERVICE_UNAVAILABLE
                 );
             }
         } catch(error){
@@ -60,7 +59,7 @@ class HealthController extends Controller {
                 {},
                 this.response,
                 apiMessageKeys.SOMETHING_WENT_WRONG,
-                statusCodes.INTERNAL_SERVER_ERROR
+                statusCodes.SERVICE_UNAVAILABLE
             );
         }
     }
