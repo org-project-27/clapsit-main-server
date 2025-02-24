@@ -21,7 +21,7 @@ export function $sendEmail(to: string, lang: LangType = default_email_lang) {
             async resetPassword(payload: ResetPasswordEmailPayloadTypes) {
                 const { full_name, reset_link, reset_link_life_hour } = payload;
                 return await SMTPAddress.noreply.transporter.sendMail({
-                    from: `${appDomain} <${SMTPAddress.noreply.email}>`,
+                    from: `${SMTPAddress.noreply.label} <${SMTPAddress.noreply.email}>`,
                     to,
                     subject: "Reset Password",
                     text: "Hello there, here the link for reset your password!",
@@ -36,20 +36,21 @@ export function $sendEmail(to: string, lang: LangType = default_email_lang) {
                     $logged(
                         `📬 "Reset Password": {from: "${SMTPAddress.noreply.email}", to: "${to}"}`,
                         true,
-                        {from: 'sendgrid', file: __filename.split('/src')[1]},
+                        {from: 'smtp', file: __filename.split('/src')[1]},
                     );
                 }).catch((error: any) => {
                     $logged(
                         `📬 "Reset Password": {from: "${SMTPAddress.noreply.email}", to: "${to}"}`,
                         false,
-                        {from: 'sendgrid', file: __filename.split('/src')[1]},
+                        {from: 'smtp', file: __filename.split('/src')[1]},
                     );
+                    throw error;
                 });
             },
             async confirmEmail(payload: ConfirmEmailEmailPayloadTypes) {
                 const { full_name, confirm_link, confirm_link_life_hour } = payload;
                 return await SMTPAddress.noreply.transporter.sendMail({
-                    from: `${appDomain} <${SMTPAddress.noreply.email}>`,
+                    from: `${SMTPAddress.noreply.label} <${SMTPAddress.noreply.email}>`,
                     to,
                     subject: "Confirm Email",
                     text: "Hello there, welcome to Clapsit. Please Confirm your email address!",
@@ -64,20 +65,21 @@ export function $sendEmail(to: string, lang: LangType = default_email_lang) {
                     $logged(
                         `📬 "Confirm Email": {from: "${SMTPAddress.noreply.email}", to: "${to}"}`,
                         true,
-                        {from: 'sendgrid', file: __filename.split('/src')[1]},
+                        {from: 'smtp', file: __filename.split('/src')[1]},
                     );
                 }).catch((error: any) => {
                     $logged(
                         `📬 "Confirm Email": {from: "${SMTPAddress.noreply.email}", to: "${to}"}`,
                         false,
-                        {from: 'sendgrid', file: __filename.split('/src')[1]},
+                        {from: 'smtp', file: __filename.split('/src')[1]},
                     );
+                    throw error;
                 });
             },
             async passwordUpdated(payload: PasswordUpdatedEmailPayloadTypes){
                 const { full_name, update_date, browser, os, platform } = payload;
                 return await SMTPAddress.noreply.transporter.sendMail({
-                    from: `${appDomain} <${SMTPAddress.noreply.email}>`,
+                    from: `${SMTPAddress.noreply.label} <${SMTPAddress.noreply.email}>`,
                     to,
                     subject: "Password Updated",
                     text: "Your password been successfully updated!",
@@ -94,14 +96,15 @@ export function $sendEmail(to: string, lang: LangType = default_email_lang) {
                     $logged(
                         `📬 "Password Updated": {from: "${SMTPAddress.noreply.email}", to: "${to}"}`,
                         true,
-                        {from: 'sendgrid', file: __filename.split('/src')[1]},
+                        {from: 'smtp', file: __filename.split('/src')[1]},
                     );
                 }).catch((error: any) => {
                     $logged(
                         `📬 "Password Updated": {from: "${SMTPAddress.noreply.email}", to: "${to}"}`,
                         false,
-                        {from: 'sendgrid', file: __filename.split('/src')[1]},
+                        {from: 'smtp', file: __filename.split('/src')[1]},
                     );
+                    throw error;
                 });
             }
         },
@@ -109,7 +112,9 @@ export function $sendEmail(to: string, lang: LangType = default_email_lang) {
 }
 
 export async function getEmailTemplate(template_name: string, values: any = {}, lang: LangType = default_email_lang){
-    values['logo_url'] = `${appDomain.toLowerCase()}/logo.png`
+    values['logo_url'] = `https://www.${appDomain.toLowerCase()}/logo.png`
+    console.log(values['logo_url']);
+    
     let templateContent: any = '<strong> Null content </strong>';
     try {
         const filePath = path.join(__dirname, `../../../views/email_templates/${lang || default_email_lang}/${template_name}.html`);

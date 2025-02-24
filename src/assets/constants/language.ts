@@ -1,6 +1,6 @@
 export const available_email_langs = [
-    'az-AZ',
     'en-US',
+    'az-AZ',
     'ru-RU'
 ] as const;
 

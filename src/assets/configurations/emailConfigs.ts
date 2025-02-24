@@ -4,10 +4,11 @@ import nodemailer from "nodemailer";
 let appDomain: string = process.env.APP_BRAND_DOMAIN || '';
 appDomain = appDomain.toLowerCase();
 const host: string = process.env.SMTP_SERVER || '';
+const company_name: any = process.env.APP_BRAND_NAME || appDomain;
 
 export const SMTPAddress = {
     noreply: {
-        //Typically used for automated emails where recipients are not expected to reply, such as newsletters, notifications, or confirmation emails.
+        label: `${company_name}`,
         email: `noreply@${appDomain}`,
         transporter: nodemailer.createTransport({
             host,
@@ -20,7 +21,7 @@ export const SMTPAddress = {
         }),
     },
     info: {
-        //Used for general inquiries, providing an easy-to-remember address for potential clients or partners.
+        label: `${company_name}`,
         email: `info@${appDomain}`,
         transporter: nodemailer.createTransport({
             // @ts-ignore
@@ -34,7 +35,7 @@ export const SMTPAddress = {
         })
     },
     support: {
-        //Dedicated to customer support, helping users with their issues or questions regarding products or services.
+        label: `${company_name} Support Team`,
         email: `support@${appDomain}`,
         transporter: nodemailer.createTransport({
             // @ts-ignore
@@ -47,22 +48,8 @@ export const SMTPAddress = {
             }
         })
     },
-    sales: {
-        //Focused on sales inquiries, where potential customers can get more information about products or services.
-        email: `sales@${appDomain}`,
-        transporter: nodemailer.createTransport({
-            // @ts-ignore
-            host,
-            port: null,
-            secure: false,
-            auth: {
-                user: null,
-                pass: null
-            }
-        })
-    },
     hr: {
-        //For human resources, where job applicants or employees can send their resumes or inquire about HR-related matters.
+        label: `${company_name} Human Resources`,
         email: `hr@${appDomain}`,
         transporter: nodemailer.createTransport({
             // @ts-ignore
@@ -76,7 +63,7 @@ export const SMTPAddress = {
         })
     },
     admin: {
-        //Used by the administrative department for various organizational tasks and communications.
+        label: `${company_name} Admin`,
         email: `admin@${appDomain}`,
         transporter: nodemailer.createTransport({
             // @ts-ignore
@@ -89,51 +76,9 @@ export const SMTPAddress = {
             }
         })
     },
-    marketing: {
-        //For the marketing team, where they handle marketing-related communications, campaigns, and inquiries.
-        email: `marketing@${appDomain}`,
-        transporter: nodemailer.createTransport({
-            // @ts-ignore
-            host,
-            port: null,
-            secure: false,
-            auth: {
-                user: null,
-                pass: null
-            }
-        })
-    },
     billing: {
-        //For finance or billing-related queries, where customers can ask about invoices, payments, or account details.
+        label: `${company_name} Billing`,
         email: `billing@${appDomain}`,
-        transporter: nodemailer.createTransport({
-            // @ts-ignore
-            host,
-            port: null,
-            secure: false,
-            auth: {
-                user: null,
-                pass: null
-            }
-        })
-    },
-    tech: {
-        //For technical support or IT-related issues, where users can report problems or seek assistance with technical products.
-        email: `tech@${appDomain}`,
-        transporter: nodemailer.createTransport({
-            // @ts-ignore
-            host,
-            port: null,
-            secure: false,
-            auth: {
-                user: null,
-                pass: null
-            }
-        })
-    },
-    feedback: {
-        //For collecting customer feedback, suggestions, or complaints to improve services or products.
-        email: `feedback@${appDomain}`,
         transporter: nodemailer.createTransport({
             // @ts-ignore
             host,
