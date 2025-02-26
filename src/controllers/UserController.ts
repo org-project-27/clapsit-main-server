@@ -8,9 +8,9 @@ import {$logged} from "#helpers/logHelpers";
 import bcrypt from "bcrypt";
 import statusCodes from "#assets/constants/statusCodes";
 import TokenSession from "#controllers/TokenSessionController";
-import {$sendEmail} from "#helpers/emailHelper";
 import {available_email_langs} from "#assets/constants/language";
 import moment from "moment";
+import SMTPController from "./SMTPController";
 
 class UserController extends Controller {
     constructor(request: Request, response: Response) {
@@ -458,27 +458,32 @@ class UserController extends Controller {
                 const appDomain: any = process.env.APP_BRAND_DOMAIN;
                 const confirm_link: any = `www.${appDomain.toLowerCase()}/confirm_email?token=${token}`;
 
-                await $sendEmail(payload.email, payload.preferred_lang)["@noreply"].confirmEmail({
-                    full_name: payload.fullname,
+                const smtp = new SMTPController(this.request, this.response);
+                const email = await smtp.sendEmailByUserId(result.id, 'noreply');
+                
+                await email?.confirmEmail({
                     confirm_link,
                     confirm_link_life_hour: TokenSession.tokenLifeHours.confirm_email
+                }).then(() => {
+                    $logged(
+                        `\n🛎️ NEW USER REGISTERED "${result.fullname} | ${result.email}"\n`,
+                        true,
+                        {file: __filename.split('/src')[1], user_id: result.id},
+                        this.request.ip,
+                        true
+                    );
+    
+                    return $sendResponse.success(
+                        {},
+                        this.response,
+                        apiMessageKeys.USER_SUCCESSFULLY_REGISTERED,
+                        statusCodes.CREATED,
+                        {count: result.id}
+                    );
+                }).catch((error: any) => {
+                    throw error;
                 })
-
-                $logged(
-                    `\n🛎️ NEW USER REGISTERED "${result.fullname} | ${result.email}"\n`,
-                    true,
-                    {file: __filename.split('/src')[1], user_id: result.id},
-                    this.request.ip,
-                    true
-                );
-
-                return $sendResponse.success(
-                    {},
-                    this.response,
-                    apiMessageKeys.USER_SUCCESSFULLY_REGISTERED,
-                    statusCodes.CREATED,
-                    {count: result.id}
-                );
+                
             }).catch((error: any) => {
                 $logged(
                     `Registration progress failed\n${error}`,
@@ -567,10 +572,12 @@ class UserController extends Controller {
             const appDomain: any = process.env.APP_BRAND_DOMAIN;
             const reset_link = `www.${appDomain.toLowerCase()}/reset_password?token=${token}`;
 
-            await $sendEmail(this.reqBody.email, emailExist.UserDetails.preferred_lang)["@noreply"].resetPassword({
+            const smtp = new SMTPController(this.request, this.response);
+            const email = await smtp.sendEmailByUserId(emailExist.user_id, 'noreply');
+
+            await email?.resetPassword({
                 reset_link,
                 reset_link_life_hour: TokenSession.tokenLifeHours.reset_password,
-                full_name: emailExist.fullname,
             }).then(() => {
                 $logged(
                     `🔑 Reset password request for email -> ${this.reqBody.email}`,
@@ -666,19 +673,23 @@ class UserController extends Controller {
                             this.request.ip,
                             true
                         );
-                        await $sendEmail(targetUser.email, targetUser.UserDetails.preferred_lang)["@noreply"].passwordUpdated({
-                            full_name: targetUser.fullname,
+                        const smtp = new SMTPController(this.request, this.response);
+                        const email = await smtp.sendEmailByUserId(targetUser.id, 'noreply');
+                        await email?.passwordUpdated({
                             update_date: moment().format('YYYY-MM-DD HH:mm:ss'),
                             browser: this.request.useragent?.browser || '--',
                             os: this.request.useragent?.os || '--',
                             platform: this.request.useragent?.platform || '--',
+                        }).then(() => {
+                            return $sendResponse.success(
+                                {},
+                                this.response,
+                                apiMessageKeys.PASSWORD_SUCCESSFULLY_CHANGED,
+                                statusCodes.OK
+                            );
+                        }).catch((error: any) => {
+                            throw error;
                         });
-                        return $sendResponse.success(
-                            {},
-                            this.response,
-                            apiMessageKeys.PASSWORD_SUCCESSFULLY_CHANGED,
-                            statusCodes.OK
-                        );
                     }).catch((error: any) => {
                         $logged(
                             `Password changing failed for.\n${error}`,
@@ -1042,21 +1053,24 @@ class UserController extends Controller {
                         this.request.ip,
                         true
                     );
-                    await $sendEmail(existUser.email, existUser.UserDetails?.preferred_lang!)[
-                        '@noreply'
-                    ].passwordUpdated({
-                        full_name: existUser.fullname,
+                    const smtp = new SMTPController(this.request, this.response);
+                    const email = await smtp.sendEmailByUserId(existUser.id, 'noreply');
+                    
+                    await email?.passwordUpdated({
                         update_date: moment().format('YYYY-MM-DD HH:mm:ss'),
                         browser: this.request.useragent?.browser || '--',
                         os: this.request.useragent?.os || '--',
                         platform: this.request.useragent?.platform || '--'
+                    }).then(() => {
+                        return $sendResponse.success(
+                            {},
+                            this.response,
+                            apiMessageKeys.PASSWORD_SUCCESSFULLY_CHANGED,
+                            statusCodes.OK
+                        );
+                    }).catch((error: any) => {
+                        throw error;
                     });
-                    return $sendResponse.success(
-                        {},
-                        this.response,
-                        apiMessageKeys.PASSWORD_SUCCESSFULLY_CHANGED,
-                        statusCodes.OK
-                    );
                 })
                 .catch((error: any) => {
                     $logged(

@@ -23,6 +23,7 @@ class HealthController extends Controller {
                     this.request.ip,
                     false
                 );
+
                 return $sendResponse.success(
                     {
                         timestamp: new Date(),

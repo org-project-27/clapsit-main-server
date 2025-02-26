@@ -1,5 +1,8 @@
 import 'dotenv/config';
 import nodemailer from "nodemailer";
+
+export type EmailsCanBe = 'noreply' | 'info' | 'support' | 'hr' | 'admin' | 'billing';
+
 // @ts-ignore
 let appDomain: string = process.env.APP_BRAND_DOMAIN || '';
 appDomain = appDomain.toLowerCase();
@@ -26,11 +29,11 @@ export const SMTPAddress = {
         transporter: nodemailer.createTransport({
             // @ts-ignore
             host,
-            port: null,
+            port: 587,
             secure: false,
             auth: {
-                user: null,
-                pass: null
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS
             }
         })
     },
@@ -40,11 +43,11 @@ export const SMTPAddress = {
         transporter: nodemailer.createTransport({
             // @ts-ignore
             host,
-            port: null,
+            port: 587,
             secure: false,
             auth: {
-                user: null,
-                pass: null
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS
             }
         })
     },
@@ -54,11 +57,11 @@ export const SMTPAddress = {
         transporter: nodemailer.createTransport({
             // @ts-ignore
             host,
-            port: null,
+            port: 587,
             secure: false,
             auth: {
-                user: null,
-                pass: null
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS
             }
         })
     },
@@ -68,11 +71,11 @@ export const SMTPAddress = {
         transporter: nodemailer.createTransport({
             // @ts-ignore
             host,
-            port: null,
+            port: 587,
             secure: false,
             auth: {
-                user: null,
-                pass: null
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS
             }
         })
     },
@@ -82,11 +85,11 @@ export const SMTPAddress = {
         transporter: nodemailer.createTransport({
             // @ts-ignore
             host,
-            port: null,
+            port: 587,
             secure: false,
             auth: {
-                user: null,
-                pass: null
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS
             }
         })
     },
