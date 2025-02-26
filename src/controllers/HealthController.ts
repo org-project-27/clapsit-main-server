@@ -4,7 +4,7 @@ import {Request, Response} from 'express';
 import { $logged } from "~/assets/helpers/logHelpers";
 import apiMessageKeys from "~/assets/constants/apiMessageKeys";
 import statusCodes from "~/assets/constants/statusCodes";
-import { Prisma } from "@prisma/client";
+import SMTPController from "./SMTPController";
 
 class HealthController extends Controller {
     constructor(request: Request, response: Response) {
@@ -24,6 +24,10 @@ class HealthController extends Controller {
                     this.request.ip,
                     false
                 );
+
+                const smtp = new SMTPController(this.request, this.response);
+                await smtp.sendEmailToUser(2, 'noreply', '');
+
                 return $sendResponse.success(
                     {
                         timestamp: new Date(),
