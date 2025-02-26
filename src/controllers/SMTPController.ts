@@ -55,101 +55,107 @@ class SMTPController extends Controller {
         user_id: number,
         withEmail: EmailsCanBe,
     ) {
-        let user = await this.database.users.findFirst({
-            where: {
-                id: user_id
-            },
-            include: {
-                UserDetails: true,
-            }
-        });
-        if (user && user.email) {
-            return {
-                send: async (
-                    args: {
-                        subject: string,
-                        description: string,
+        if(user_id){
+            let user = await this.database.users.findUnique({
+                where: {
+                    id: user_id
+                },
+                include: {
+                    UserDetails: true,
+                }
+            });
+            
+            if (user && user.email) {
+                return {
+                    send: async (
+                        args: {
+                            subject: string,
+                            description: string,
+                        },
+                        content: string | HTMLElement,
+                    ) => {
+                        if (content && args?.subject && args.description) {
+                            return await this.#sendEmail(
+                                user.email,
+                                withEmail,
+                                {
+                                    subject: args.subject,
+                                    description: args.description,
+                                    html: content
+                                }
+                            );
+                        }
                     },
-                    content: string | HTMLElement,
-                ) => {
-                    if (content && args?.subject && args.description) {
-                        return await this.#sendEmail(
+                    resetPassword: async (args: { reset_link: any, reset_link_life_hour: any }) => {
+                        const template = await getEmailTemplate('reset_password', {
+                            full_name: user.fullname,
+                            company_name: this.#company_name,
+                            reset_link: args.reset_link,
+                            reset_link_life_hour: args.reset_link_life_hour,
+                            support_team_email: SMTPAddress.support.email,
+                        }, user.UserDetails?.preferred_lang || default_email_lang)
+                        await this.#sendEmail(
                             user.email,
                             withEmail,
                             {
-                                subject: args.subject,
-                                description: args.description,
-                                html: content
+                                subject: 'Reset Password',
+                                description: 'Reset your password with magic link',
+                                html: template
                             }
                         );
-                    }
-                },
-                resetPassword: async (args: { reset_link: any, reset_link_life_hour: any }) => {
-                    const template = await getEmailTemplate('reset_password', {
-                        full_name: user.fullname,
-                        company_name: this.#company_name,
-                        reset_link: args.reset_link,
-                        reset_link_life_hour: args.reset_link_life_hour,
-                        support_team_email: SMTPAddress.support.email,
-                    }, user.UserDetails?.preferred_lang || default_email_lang)
-                    await this.#sendEmail(
-                        user.email,
-                        withEmail,
-                        {
-                            subject: 'Reset Password',
-                            description: 'Reset your password with magic link',
-                            html: template
-                        }
-                    );
-                },
-                confirmEmail: async (args: {
-                    confirm_link: any,
-                    confirm_link_life_hour: any,
-                }) => {
-                    const template = await getEmailTemplate('confirm_email', {
-                        company_name: this.#company_name,
-                        full_name: user.fullname,
-                        confirm_link: args.confirm_link,
-                        confirm_link_life_hour: args.confirm_link_life_hour,
-                        support_team_email: SMTPAddress.support.email,
-                    }, user.UserDetails?.preferred_lang || default_email_lang);
-                    await this.#sendEmail(
-                        user.email,
-                        withEmail,
-                        {
-                            subject: 'Confirm Email',
-                            description: 'Hello there, welcome to Clapsit. Please Confirm your email address!',
-                            html: template
-                        }
-                    );
-                },
-                passwordUpdated: async (args: {
-                    update_date: any,
-                    browser: any,
-                    platform: any,
-                    os: any,
-                }) => {
-                    const template = await getEmailTemplate('password_updated', {
-                        support_team_email: SMTPAddress.support.email,
-                        company_name: this.#company_name,
-                        full_name: user.fullname,
-                        update_date: args.update_date,
-                        browser: args.browser,
-                        platform: args.platform,
-                        os: args.os,
-                    }, user.UserDetails?.preferred_lang || default_email_lang);
-
-                    await this.#sendEmail(
-                        user.email,
-                        withEmail,
-                        {
-                            subject: 'Password Updated',
-                            description: 'Your password been successfully updated!',
-                            html: template
-                        }
-                    );
-                },
+                    },
+                    confirmEmail: async (args: {
+                        confirm_link: any,
+                        confirm_link_life_hour: any,
+                    }) => {
+                        const template = await getEmailTemplate('confirm_email', {
+                            company_name: this.#company_name,
+                            full_name: user.fullname,
+                            confirm_link: args.confirm_link,
+                            confirm_link_life_hour: args.confirm_link_life_hour,
+                            support_team_email: SMTPAddress.support.email,
+                        }, user.UserDetails?.preferred_lang || default_email_lang);
+                        await this.#sendEmail(
+                            user.email,
+                            withEmail,
+                            {
+                                subject: 'Confirm Email',
+                                description: 'Hello there, welcome to Clapsit. Please Confirm your email address!',
+                                html: template
+                            }
+                        );
+                    },
+                    passwordUpdated: async (args: {
+                        update_date: any,
+                        browser: any,
+                        platform: any,
+                        os: any,
+                    }) => {
+                        const template = await getEmailTemplate('password_updated', {
+                            support_team_email: SMTPAddress.support.email,
+                            company_name: this.#company_name,
+                            full_name: user.fullname,
+                            update_date: args.update_date,
+                            browser: args.browser,
+                            platform: args.platform,
+                            os: args.os,
+                        }, user.UserDetails?.preferred_lang || default_email_lang);
+    
+                        await this.#sendEmail(
+                            user.email,
+                            withEmail,
+                            {
+                                subject: 'Password Updated',
+                                description: 'Your password been successfully updated!',
+                                html: template
+                            }
+                        );
+                    },
+                }
             }
+        } else {
+            // $sendResponse.failed({}, this.response, apiMessageKeys.USER_NOT_FOUND, statusCodes.NOT_FOUND);
+            throw new Error('"user_id" null or undefined!')
         }
     }
     async #sendEmail(to: string, withEmail: EmailsCanBe, content: {
