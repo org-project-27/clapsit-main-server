@@ -11,21 +11,21 @@ async function main() {
       where: { id: user.id },
       update: {},
       create: user,
-    }).then((result) => console.log(`[📦] "users" seeds inserted: ${JSON.stringify(result)}`));
+    });
   }
   for (const details of userDetails) {
     await prisma.userDetails.upsert({
       where: { user_id: details.user_id },
       update: {},
       create: details,
-    }).then((result) => console.log(`[📦] "userDetails" seeds inserted: ${JSON.stringify(result)}`));
+    });
   }
   for (const sessions of tokenSessions) {
     await prisma.tokenSessions.upsert({
       where: { id: sessions.id },
       update: {},
       create: sessions
-    }).then((result) => console.log(`[📦] "tokenSessions" seeds inserted: ${JSON.stringify(result)}`));
+    });
   }
 }
 

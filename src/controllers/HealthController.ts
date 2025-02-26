@@ -4,7 +4,6 @@ import {Request, Response} from 'express';
 import { $logged } from "~/assets/helpers/logHelpers";
 import apiMessageKeys from "~/assets/constants/apiMessageKeys";
 import statusCodes from "~/assets/constants/statusCodes";
-import SMTPController from "./SMTPController";
 
 class HealthController extends Controller {
     constructor(request: Request, response: Response) {
