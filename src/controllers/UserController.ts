@@ -573,7 +573,7 @@ class UserController extends Controller {
             const reset_link = `www.${appDomain.toLowerCase()}/reset_password?token=${token}`;
 
             const smtp = new SMTPController(this.request, this.response);
-            const email = await smtp.sendEmailByUserId(emailExist.user_id, 'noreply');
+            const email = await smtp.sendEmailByUserId(emailExist.id, 'noreply');
 
             await email?.resetPassword({
                 reset_link,
