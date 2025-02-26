@@ -9,7 +9,7 @@ const company_name: any = process.env.APP_BRAND_NAME;
 type LangType = typeof available_email_langs[number] | string;
 
 export async function getEmailTemplate(template_name: string, values: any = {}, lang: LangType = default_email_lang){
-    values['logo_url'] = `https://www.${appDomain.toLowerCase()}/logo.png`
+    values['logo_url'] = `https://www.${appDomain.toLowerCase()}/logo.svg`
     let templateContent: any = '<strong> Null content </strong>';
     try {
         const filePath = path.join(__dirname, `../../../views/email_templates/${lang || default_email_lang}/${template_name}.html`);
