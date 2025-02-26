@@ -25,9 +25,6 @@ class HealthController extends Controller {
                     false
                 );
 
-                const smtp = new SMTPController(this.request, this.response);
-                await smtp.sendEmailToUser(2, 'noreply', '');
-
                 return $sendResponse.success(
                     {
                         timestamp: new Date(),

@@ -113,8 +113,6 @@ export function $sendEmail(to: string, lang: LangType = default_email_lang) {
 
 export async function getEmailTemplate(template_name: string, values: any = {}, lang: LangType = default_email_lang){
     values['logo_url'] = `https://www.${appDomain.toLowerCase()}/logo.png`
-    console.log(values['logo_url']);
-    
     let templateContent: any = '<strong> Null content </strong>';
     try {
         const filePath = path.join(__dirname, `../../../views/email_templates/${lang || default_email_lang}/${template_name}.html`);
