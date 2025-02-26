@@ -31,13 +31,14 @@ import { default_email_lang } from "~/assets/constants/language";
         os: 'any',
     });
 
-    await email?.send(`
+    await email?.send(
+        { subject: "Test Email", description: "For check smtp server" },
+        `
             <h1>Hello world</h1>
             <p>
                 Success, SMTP Server is available
             </p>
-        `, 
-        { subject: "Test Email", description: "For check smtp server" }
+        `
     );
  
  **/
@@ -64,11 +65,12 @@ class SMTPController extends Controller {
         });
         if (user && user.email) {
             return {
-                send: async (content: string | HTMLElement,
+                send: async (
                     args: {
                         subject: string,
                         description: string,
-                    }
+                    },
+                    content: string | HTMLElement,
                 ) => {
                     if (content && args?.subject && args.description) {
                         return await this.#sendEmail(
