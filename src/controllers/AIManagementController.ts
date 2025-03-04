@@ -170,7 +170,7 @@ class AIManagementController extends Controller {
             const history_order: any[] = [];
             history.forEach((item, index) => {
                 history_order.push({
-                    role: 'user',
+                    role: index === 0 ? 'system' : 'user',
                     content: item.question
                 });
                 history_order.push({
