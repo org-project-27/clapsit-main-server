@@ -113,10 +113,12 @@ class AIManagementController extends Controller {
                                 }
                             });
                             let data = result.chat.reverse();
-                            
-                            // For delete inital chats 
-                            data.pop(); // for user side
-                            data.pop(); // for assistant side
+
+                            if (data.length > 2) {
+                                // For delete inital chats 
+                                data.pop(); // for user side
+                                data.pop(); // for assistant side
+                            }
                             return $sendResponse.success(
                                 data,
                                 this.response,
