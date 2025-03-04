@@ -36,9 +36,9 @@ jobs:
             rm -rf ./dist
             git checkout main
             git pull
-            npm install
-            npm run db:migrate
-            npm run db:seed
+            pnpm install
+            pnpm run db:migrate
+            pnpm run db:seed
             pm2 start ecosystem.config.cjs
             pm2 save
             pm2 startup
