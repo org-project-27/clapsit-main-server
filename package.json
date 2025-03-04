@@ -80,5 +80,15 @@
     "#public": "src/public",
     "#helpers": "src/assets/helpers",
     "#types": "src/assets/types"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "bcrypt",
+      "es5-ext",
+      "esbuild",
+      "prisma"
+    ]
   }
 }
