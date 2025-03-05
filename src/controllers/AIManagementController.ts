@@ -14,8 +14,9 @@ class AIManagementController extends Controller {
         this.actions['GET']['/generate_conversation'] = this.generateConversation;
         this.actions['POST']['/ask/:conversation_key'] = this.ask;
         this.#model = new Chatbot({
-            baseURL: process.env.AI_CHATBOT_BASE_URL,
-            apiKey: process.env.AI_CHATBOT_API_KEY,
+            baseURL: process.env.GROK_BASE_URL,
+            apiKey: process.env.GROK_API_KEY,
+            model: 'grok-2-vision-latest',
         });
     }
 
