@@ -9,6 +9,7 @@ export default class Chatbot {
     constructor(configs: {
         baseURL: any,
         apiKey: any,
+        model: any,
         configs?: any,
     }) {
         this.openai = new OpenAI({
@@ -24,7 +25,7 @@ export default class Chatbot {
             const payload = {
                 ...this.configs.configs,
                 messages: this.conversationHistory,
-                model: "deepseek-chat",
+                model: this.configs.model,
             };
             
             const completion = await this.openai.chat.completions.create(payload);
