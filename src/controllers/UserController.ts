@@ -132,7 +132,7 @@ class UserController extends Controller {
                     {required_fields},
                     this.response,
                     apiMessageKeys.SOMETHING_WENT_WRONG,
-                    statusCodes.BAD_REQUEST
+                    statusCodes.UNPROCESSABLE_ENTITY
                 );
             } else if (this.reqQuery.token) {
                 const sessions = new TokenSession(this.request, this.response);
@@ -212,7 +212,7 @@ class UserController extends Controller {
                     {required_fields},
                     this.response,
                     apiMessageKeys.SOMETHING_WENT_WRONG,
-                    statusCodes.BAD_REQUEST
+                    statusCodes.UNPROCESSABLE_ENTITY
                 );
             } else if (this.reqQuery.token) {
                 const sessions = new TokenSession(this.request, this.response);
@@ -282,7 +282,7 @@ class UserController extends Controller {
                     {required_fields: validationRequiredFields},
                     this.response,
                     apiMessageKeys.USER_LOGIN_PROGRESS_FAILED,
-                    statusCodes.BAD_REQUEST
+                    statusCodes.UNPROCESSABLE_ENTITY
                 );
             }
 
@@ -292,7 +292,7 @@ class UserController extends Controller {
                     {},
                     this.response,
                     apiMessageKeys.INVALID_EMAIL,
-                    statusCodes.BAD_REQUEST
+                    statusCodes.UNPROCESSABLE_ENTITY
                 );
             }
 
@@ -302,7 +302,7 @@ class UserController extends Controller {
                     {},
                     this.response,
                     apiMessageKeys.INVALID_PASSWORD,
-                    statusCodes.BAD_REQUEST
+                    statusCodes.UNPROCESSABLE_ENTITY
                 );
             }
 
@@ -379,7 +379,7 @@ class UserController extends Controller {
                     {required_fields: validationRequiredFields},
                     this.response,
                     apiMessageKeys.USER_REGISTRATION_FAILED,
-                    statusCodes.BAD_REQUEST
+                    statusCodes.UNPROCESSABLE_ENTITY
                 );
             }
 
@@ -389,7 +389,7 @@ class UserController extends Controller {
                     {},
                     this.response,
                     apiMessageKeys.INVALID_EMAIL,
-                    statusCodes.BAD_REQUEST
+                    statusCodes.UNPROCESSABLE_ENTITY
                 );
             }
 
@@ -415,7 +415,7 @@ class UserController extends Controller {
                     {},
                     this.response,
                     apiMessageKeys.INVALID_PASSWORD,
-                    statusCodes.BAD_REQUEST
+                    statusCodes.UNPROCESSABLE_ENTITY
                 );
             }
 
@@ -425,7 +425,7 @@ class UserController extends Controller {
                     {},
                     this.response,
                     apiMessageKeys.INVALID_FULLNAME,
-                    statusCodes.BAD_REQUEST
+                    statusCodes.UNPROCESSABLE_ENTITY
                 );
             }
 
@@ -497,7 +497,7 @@ class UserController extends Controller {
                     {},
                     this.response,
                     apiMessageKeys.USER_REGISTRATION_FAILED,
-                    statusCodes.BAD_REQUEST
+                    statusCodes.UNPROCESSABLE_ENTITY
                 );
             })
 
@@ -530,7 +530,7 @@ class UserController extends Controller {
                     {required_fields},
                     this.response,
                     apiMessageKeys.SOMETHING_WENT_WRONG,
-                    statusCodes.BAD_REQUEST
+                    statusCodes.UNPROCESSABLE_ENTITY
                 );
             }
             // step #2: Validate email string
@@ -539,7 +539,7 @@ class UserController extends Controller {
                     {required_fields},
                     this.response,
                     apiMessageKeys.INVALID_EMAIL,
-                    statusCodes.BAD_REQUEST
+                    statusCodes.UNPROCESSABLE_ENTITY
                 );
             }
             // step #3: Check email is exist on db
@@ -620,7 +620,7 @@ class UserController extends Controller {
                     {required_fields},
                     this.response,
                     apiMessageKeys.SOMETHING_WENT_WRONG,
-                    statusCodes.BAD_REQUEST
+                    statusCodes.UNPROCESSABLE_ENTITY
                 );
             }
             // step #2: Validate password strength
@@ -629,7 +629,7 @@ class UserController extends Controller {
                     {},
                     this.response,
                     apiMessageKeys.INVALID_PASSWORD,
-                    statusCodes.BAD_REQUEST
+                    statusCodes.UNPROCESSABLE_ENTITY
                 );
             }
 
@@ -743,7 +743,7 @@ class UserController extends Controller {
                     {required_fields},
                     this.response,
                     apiMessageKeys.SOMETHING_WENT_WRONG,
-                    statusCodes.BAD_REQUEST
+                    statusCodes.UNPROCESSABLE_ENTITY
                 )
             }
             const {lang} = this.reqBody;
@@ -752,7 +752,7 @@ class UserController extends Controller {
                     {},
                     this.response,
                     apiMessageKeys.SOMETHING_WENT_WRONG,
-                    statusCodes.BAD_REQUEST
+                    statusCodes.UNPROCESSABLE_ENTITY
                 )
             }
 
@@ -792,12 +792,12 @@ class UserController extends Controller {
             const bodyFields = Object.keys(body);
 
             if (!bodyFields.length || !bodyFields.every((field) => fields.includes(field))) {
-                return $sendResponse.failed({}, this.response, apiMessageKeys.INVALID_BODY, statusCodes.BAD_REQUEST);
+                return $sendResponse.failed({}, this.response, apiMessageKeys.INVALID_BODY, statusCodes.UNPROCESSABLE_ENTITY);
             }
 
             if(bodyFields.find(field => field == 'birthday')) {
                 if (!validateBirthday(body['birthday'])) {
-                    return $sendResponse.failed({}, this.response, apiMessageKeys.INVALID_BIRTHDAY, statusCodes.BAD_REQUEST);
+                    return $sendResponse.failed({}, this.response, apiMessageKeys.INVALID_BIRTHDAY, statusCodes.UNPROCESSABLE_ENTITY);
                 }    
 
                 body['birthday'] = new Date(body['birthday'])
@@ -809,13 +809,13 @@ class UserController extends Controller {
                 }
 
                 if (body['bio'].length > 500) {
-                    return $sendResponse.failed({}, this.response, apiMessageKeys.INVALID_BRAND_BIO_SIZE, statusCodes.BAD_REQUEST);
+                    return $sendResponse.failed({}, this.response, apiMessageKeys.INVALID_BRAND_BIO_SIZE, statusCodes.UNPROCESSABLE_ENTITY);
                 }
             }
 
             if (bodyFields.find((field) => field == 'phone')) {
                 if (!validatePhoneNumber(body['phone'])) {
-                    return $sendResponse.failed({}, this.response, apiMessageKeys.INVALID_PHONE, statusCodes.BAD_REQUEST);
+                    return $sendResponse.failed({}, this.response, apiMessageKeys.INVALID_PHONE, statusCodes.UNPROCESSABLE_ENTITY);
                 }
 
                 // TODO: Send SMS verification code
@@ -823,7 +823,7 @@ class UserController extends Controller {
 
             if (bodyFields.find((field) => field == 'fullname')) {
                 if (!validateFullName(body['fullname'])) {
-                    return $sendResponse.failed({}, this.response, apiMessageKeys.INVALID_FULLNAME, statusCodes.BAD_REQUEST);
+                    return $sendResponse.failed({}, this.response, apiMessageKeys.INVALID_FULLNAME, statusCodes.UNPROCESSABLE_ENTITY);
                 }
             }
 
@@ -862,7 +862,7 @@ class UserController extends Controller {
                     {},
                     this.response,
                     apiMessageKeys.OBJECT_NOT_FOUND,
-                    statusCodes.BAD_REQUEST
+                    statusCodes.UNPROCESSABLE_ENTITY
                 );
             }
 
@@ -937,7 +937,7 @@ class UserController extends Controller {
                     {},
                     this.response,
                     apiMessageKeys.USER_NOT_FOUND,
-                    statusCodes.BAD_REQUEST
+                    statusCodes.UNPROCESSABLE_ENTITY
                 );
             }
 
@@ -988,7 +988,7 @@ class UserController extends Controller {
                     {required_fields},
                     this.response,
                     apiMessageKeys.SOMETHING_WENT_WRONG,
-                    statusCodes.BAD_REQUEST
+                    statusCodes.UNPROCESSABLE_ENTITY
                 )
             }
 
@@ -1031,7 +1031,7 @@ class UserController extends Controller {
                     {},
                     this.response,
                     apiMessageKeys.INVALID_PASSWORD,
-                    statusCodes.BAD_REQUEST
+                    statusCodes.UNPROCESSABLE_ENTITY
                 );
             }
 
