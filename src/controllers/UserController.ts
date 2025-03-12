@@ -163,7 +163,7 @@ class UserController extends Controller {
                             return $sendResponse.success(
                                 {},
                                 this.response,
-                                apiMessageKeys.DONE,
+                                apiMessageKeys.EMAIL_SUCCESSFULLY_CONFIRMED,
                                 statusCodes.ACCEPTED
                             );
                         })
