@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { ContentDeliveryNetwork } from './contenDeliveryNetwork';
-
+const database =  new PrismaClient();
 type MethodType = any;
 
 export type Methods = {
@@ -22,7 +22,7 @@ export class Controller {
   public reqCookies: Object;
 
   public actions: Methods;
-  public database = new PrismaClient();
+  public database = database;
   public cdn = new ContentDeliveryNetwork();
   constructor(request: Request, response: Response) {
     this.request = request;

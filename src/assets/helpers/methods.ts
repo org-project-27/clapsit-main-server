@@ -95,7 +95,6 @@ export const $uploader = (objectFor?: string) => {
         try {
             const authentication_result = JSON.parse(request.body.authentication_result);
             const { user_id } = authentication_result.payload;
-            const database = new PrismaClient();
             const storage = multer.diskStorage({
                 destination: function (req, file, cb) {
                     const { mimetype } = file;
@@ -110,7 +109,7 @@ export const $uploader = (objectFor?: string) => {
                     const extension = originalname.split('.').pop();
                     const id = uuidv4();
                     const path = `${id}.${extension}`;
-                    
+                    const database = new PrismaClient();
                     await database.objects.create({
                         data: {
                             id,
@@ -121,7 +120,7 @@ export const $uploader = (objectFor?: string) => {
                             object_for: objectFor!
                         }
                     });
-
+                    database.$disconnect();
                     req.body['authentication_result'] = authentication_result;
                     req.body['object_id'] = id;
                     cb(null, path);
