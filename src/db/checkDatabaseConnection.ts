@@ -10,7 +10,8 @@ const checkDatabaseConnection = async () => {
         await prisma.$queryRaw`SELECT 1`;
         $logged('Prisma successfully connected', true, {from: 'prisma'}, null, true);
         $logged("Database started!", true, {from: 'prisma'}, null, true);
-        await afterConnect(prisma)
+        await afterConnect(prisma);
+        await prisma.$disconnect();
     } catch (error) {
         console.error('PrismaError connecting to the database:', error);
         $logged('Database crashed', false, {from: 'prisma'}, null, true)
@@ -61,7 +62,7 @@ async function dropAllExpiredSessions(prisma: any){
 }
 
 async function afterConnect(prisma: any){
-    await dropAllExpiredSessions(prisma)
+    await dropAllExpiredSessions(prisma);
 }
 
 export default checkDatabaseConnection();

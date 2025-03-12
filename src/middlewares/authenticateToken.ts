@@ -7,11 +7,11 @@ import { $logged } from '#helpers/logHelpers';
 import { PrismaClient } from '@prisma/client';
 
 export default async (req: Request, res: Response, next: NextFunction) => {
+  const db = new PrismaClient();
   try {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
     const sessions = new TokenSessionController(req, res);
-    const db = new PrismaClient();
     if (token == null) {
       return $sendResponse.failed({}, res, apiMessageKeys.AUTH_REQUIRED, statusCodes.FORBIDDEN);
     }
@@ -30,8 +30,10 @@ export default async (req: Request, res: Response, next: NextFunction) => {
       return $sendResponse.failed({}, res, apiMessageKeys.USER_NOT_FOUND, statusCodes.FORBIDDEN);
     }
     req.body['authentication_result'] = JSON.stringify(result);
+    db.$disconnect();
     next();
   } catch (error: any) {
+    db.$disconnect();
     $logged(error, false, { file: __filename.split('/src')[1] });
     return $sendResponse.failed({ error }, res, apiMessageKeys.INVALID_TOKEN, statusCodes.UNAUTHORIZED);
   }
