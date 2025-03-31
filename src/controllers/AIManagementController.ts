@@ -6,19 +6,18 @@ import apiMessageKeys from "~/assets/constants/apiMessageKeys";
 import statusCodes from "~/assets/constants/statusCodes";
 import jwt from "jsonwebtoken";
 import Chatbot, { chatbot_response_configs } from "~/assets/helpers/chatBot";
-import { default_email_lang } from "~/assets/constants/language";
+import aiPresets, { definationExamples, presets } from "~/assets/constants/aiPresets";
 
-class AIManagementController extends Controller {
+export class AIManagementController extends Controller {
     #modelGrok;
     #modelDeepSeek;
     #availableModels: string[] = ['', 'deep_seek', 'grok'];
-    jsonResponse = true;
+    #availableKeys: string[] = Object.keys(presets);
 
     constructor(request: Request, response: Response) {
         super(request, response);
-        this.actions['GET']['/generate_conversation'] = this.generateConversation;
+        this.actions['GET']['/start'] = this.start;
         this.actions['POST']['/ask/:conversation_key'] = this.ask;
-
         this.#modelGrok = new Chatbot({
             baseURL: process.env.GROK_BASE_URL,
             apiKey: process.env.GROK_API_KEY,
@@ -31,9 +30,9 @@ class AIManagementController extends Controller {
         });
     }
 
-    generateConversation = async () => {
+    start = async () => {
         try {
-            let { user_id, key_name, topic, model } = this.reqQuery;
+            let { user_id, key_name } = this.reqQuery;
             if (user_id && JSON.parse(this.reqBody.authentication_result).session.payload.user_id == user_id) {
                 const user = await this.database.users.findUnique({ where: { id: Number(user_id) }, include: { AIConversationKeys: true, UserDetails: true } });
                 if (user) {
@@ -51,10 +50,9 @@ class AIManagementController extends Controller {
                             apiMessageKeys.KEY_NAME_IS_UNDEFINED,
                             statusCodes.UNPROCESSABLE_ENTITY
                         );
-                    }
-                    if (!model) {
+                    } else if (key_name && !this.#availableKeys.includes(key_name)) {
                         $logged(
-                            'Error: Undefined "model" request',
+                            'Error: Unrecognizable "key_name" request',
                             false,
                             { file: __filename.split('/src')[1] },
                             this.request.ip,
@@ -63,88 +61,37 @@ class AIManagementController extends Controller {
                         return $sendResponse.failed(
                             {},
                             this.response,
-                            apiMessageKeys.MODEL_IS_UNDEFINED,
-                            statusCodes.UNPROCESSABLE_ENTITY
-                        );
-                    } else if (!this.#availableModels.includes(model)) {
-                        $logged(
-                            'Error: Unsupported "model" request',
-                            false,
-                            { file: __filename.split('/src')[1] },
-                            this.request.ip,
-                            true
-                        )
-                        return $sendResponse.failed(
-                            {},
-                            this.response,
-                            apiMessageKeys.MODEL_IS_UNSUPPORTED,
+                            apiMessageKeys.INVALID_KEY_NAME,
                             statusCodes.UNPROCESSABLE_ENTITY
                         );
                     }
 
-                    // Create conversation key:
-                    const token = jwt.sign({ user_id, model, key_name }, process.env.ACCESS_TOKEN_SECRET!);
-                    const conversation_key = token.split('.').reverse().join('_');
-                    const created = await this.database.aIConversationKeys.create({
-                        data: {
-                            user_id: Number(user_id),
-                            key_name,
-                            conversation_key,
-                            model,
-                            topic
-                        }
+                    const result = await this.generateConversation({
+                        topic: aiPresets(key_name)(user.fullname, user.UserDetails?.preferred_lang),
+                        user_id,
+                        key_name,
+                        model: 'grok',
+                        okay_response: definationExamples.default.okay_response
                     });
 
-                    const firstOfAll = [
-                        `Hello there. My name is ${user.fullname}.`,
-                        `Please speak with me in ${user.UserDetails?.preferred_lang ? user.UserDetails?.preferred_lang : default_email_lang} language, until i say change language.`,
-                    ];
-
-                    if (topic) {
-                        firstOfAll.push(
-                            `I wanna talking about: ${topic}.`,
-                        )
-                    }
-
-                    if(this.jsonResponse){
-                        firstOfAll.push(
-                            `Oh by the way i am a robot and don't understant texts.
-                            Please return the answer to me as json, never use text. For example response:
-                            {
-                                "message": "Okay i will do it",
-                                "result": 20,
-                                "other" : "..."
-                            }`
-                        )
-                    }
-
-                    await this.database.aIConversationHistory.create({
-                        data: {
-                            conversation_key,
-                            question: firstOfAll.join('\n'),
-                            response: `{ "message": "Okay, I can do it, let's start!" }`
-                        }
-                    })
 
                     return $sendResponse.success(
                         {
-                            conversation_key,
-                            created_at: created.created_at,
+                            result
                         },
                         this.response,
                         apiMessageKeys.DONE,
-                        statusCodes.CREATED
+                        statusCodes.OK,
                     );
+
                 }
             }
-
             return $sendResponse.failed(
                 {},
                 this.response,
                 apiMessageKeys.USER_NOT_FOUND,
                 statusCodes.NOT_FOUND
             );
-
         } catch (error: any) {
             $logged(
                 error.message,
@@ -161,6 +108,52 @@ class AIManagementController extends Controller {
             );
         }
     }
+
+    generateConversation = async (
+        data: {
+            topic: string,
+            user_id: number | string,
+            model: string,
+            key_name: string,
+            okay_response: string,
+        }
+    ) => {
+        const {
+            topic,
+            user_id,
+            model,
+            key_name,
+            okay_response,
+        } = data;
+        // Create converstation key:
+        const token = jwt.sign({ user_id, model, key_name }, process.env.ACCESS_TOKEN_SECRET!);
+        const conversation_key = token.split('.').reverse().join('CIT');
+
+
+        // Register converstation key:
+        const created = await this.database.aIConversationKeys.create({
+            data: {
+                user_id: Number(user_id),
+                key_name,
+                conversation_key,
+                model,
+                topic
+            }
+        });
+        await this.database.aIConversationHistory.create({
+            data: {
+                conversation_key,
+                question: topic,
+                response: okay_response
+            }
+        });
+
+        // Return result:
+        return {
+            conversation_key,
+            created_at: created.created_at,
+        }
+    }
     ask = async ({ params }: { params: Record<string, any> }) => {
         try {
             const conversation_key = params.conversation_key;
@@ -172,10 +165,9 @@ class AIManagementController extends Controller {
                     if (conversation) {
                         if (this.#availableModels.includes(conversation.model)) {
                             const history = await this.database.aIConversationHistory.findMany({ where: { conversation_key } });
-
                             const chat = await this.database.aIConversationHistory.create({
                                 data: {
-                                    question: data.message,
+                                    question: JSON.stringify(data.value),
                                     response: '',
                                     conversation_key
                                 }
@@ -213,7 +205,7 @@ class AIManagementController extends Controller {
                                     data,
                                     this.response,
                                     apiMessageKeys.DONE,
-                                    statusCodes.CREATED
+                                    statusCodes.OK
                                 );
                             }
                         } else {
@@ -271,8 +263,8 @@ class AIManagementController extends Controller {
                     role: index === 0 ? 'system' : 'user',
                     content: item.question
                 });
-                if(this.#modelDeepSeek.configs.model === 'deepseek-reasoner') {
-                    if(index !== 0) {
+                if (this.#modelDeepSeek.configs.model === 'deepseek-reasoner') {
+                    if (index !== 0) {
                         history_order.push({
                             role: 'assistant',
                             content: item.response
