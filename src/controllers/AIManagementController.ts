@@ -17,7 +17,8 @@ export class AIManagementController extends Controller {
     constructor(request: Request, response: Response) {
         super(request, response);
         this.actions['GET']['/start'] = this.start;
-        this.actions['POST']['/ask/:conversation_key'] = this.ask;
+        this.actions['POST']['/json_generator/:conversation_key'] = this.jsonGenerator;
+        
         this.#modelGrok = new Chatbot({
             baseURL: process.env.GROK_BASE_URL,
             apiKey: process.env.GROK_API_KEY,
@@ -30,85 +31,7 @@ export class AIManagementController extends Controller {
         });
     }
 
-    start = async () => {
-        try {
-            let { user_id, key_name } = this.reqQuery;
-            if (user_id && JSON.parse(this.reqBody.authentication_result).session.payload.user_id == user_id) {
-                const user = await this.database.users.findUnique({ where: { id: Number(user_id) }, include: { AIConversationKeys: true, UserDetails: true } });
-                if (user) {
-                    if (!key_name) {
-                        $logged(
-                            'Error: Undefined "key_name" request',
-                            false,
-                            { file: __filename.split('/src')[1] },
-                            this.request.ip,
-                            true
-                        )
-                        return $sendResponse.failed(
-                            {},
-                            this.response,
-                            apiMessageKeys.KEY_NAME_IS_UNDEFINED,
-                            statusCodes.UNPROCESSABLE_ENTITY
-                        );
-                    } else if (key_name && !this.#availableKeys.includes(key_name)) {
-                        $logged(
-                            'Error: Unrecognizable "key_name" request',
-                            false,
-                            { file: __filename.split('/src')[1] },
-                            this.request.ip,
-                            true
-                        )
-                        return $sendResponse.failed(
-                            {},
-                            this.response,
-                            apiMessageKeys.INVALID_KEY_NAME,
-                            statusCodes.UNPROCESSABLE_ENTITY
-                        );
-                    }
-
-                    const result = await this.generateConversation({
-                        topic: aiPresets(key_name)(user.fullname, user.UserDetails?.preferred_lang),
-                        user_id,
-                        key_name,
-                        model: 'grok',
-                        okay_response: definationExamples.default.okay_response
-                    });
-
-
-                    return $sendResponse.success(
-                        {
-                            result
-                        },
-                        this.response,
-                        apiMessageKeys.DONE,
-                        statusCodes.OK,
-                    );
-
-                }
-            }
-            return $sendResponse.failed(
-                {},
-                this.response,
-                apiMessageKeys.USER_NOT_FOUND,
-                statusCodes.NOT_FOUND
-            );
-        } catch (error: any) {
-            $logged(
-                error.message,
-                false,
-                { file: __filename.split('/src')[1] },
-                this.request.ip,
-                true
-            )
-            $sendResponse.failed(
-                {},
-                this.response,
-                apiMessageKeys.SOMETHING_WENT_WRONG,
-                statusCodes.INTERNAL_SERVER_ERROR
-            );
-        }
-    }
-
+    
     generateConversation = async (
         data: {
             topic: string,
@@ -154,58 +77,70 @@ export class AIManagementController extends Controller {
             created_at: created.created_at,
         }
     }
-    ask = async ({ params }: { params: Record<string, any> }) => {
+    ask = async (conversation_key: string, payload: {user_id: any, data: any}) => {
         try {
-            const conversation_key = params.conversation_key;
-            const { user_id, data } = this.reqBody;
+            const { user_id, data } = payload;
 
             if (conversation_key) {
                 if (user_id && JSON.parse(this.reqBody.authentication_result).session.payload.user_id == user_id) {
-                    const conversation = await this.database.aIConversationKeys.findUnique({ where: { user_id: Number(user_id), conversation_key }, include: { Users: true } });
+                    const conversation = await this.database.aIConversationKeys.findUnique({ 
+                        where: { 
+                            user_id: Number(user_id), 
+                            conversation_key 
+                        }, 
+                        include: { 
+                            Users: true 
+                        } 
+                    });
                     if (conversation) {
-                        if (this.#availableModels.includes(conversation.model)) {
-                            const history = await this.database.aIConversationHistory.findMany({ where: { conversation_key } });
-                            const chat = await this.database.aIConversationHistory.create({
-                                data: {
-                                    question: JSON.stringify(data.value),
-                                    response: '',
-                                    conversation_key
+                        if(this.#availableModels.includes(conversation.model)) {
+                            const question = JSON.stringify(data.value);
+                            if (question) {
+                                const history = await this.database.aIConversationHistory.findMany({ where: { conversation_key } });
+                                const chat = await this.database.aIConversationHistory.create({
+                                    data: {
+                                        question,
+                                        response: '',
+                                        conversation_key
+                                    }
+                                });
+    
+                                let gen;
+                                if (this.#availableModels.indexOf(conversation.model) === 1) {
+                                    gen = await this.#Gen1(chat, history, conversation.Users);
+                                } else if (this.#availableModels.indexOf(conversation.model) === 2) {
+                                    gen = await this.#Gen2(chat, history, conversation.Users);
+                                } else {
+                                    return $sendResponse.failed(
+                                        {},
+                                        this.response,
+                                        apiMessageKeys.MODEL_IS_UNSUPPORTED,
+                                        statusCodes.UNPROCESSABLE_ENTITY
+                                    );
                                 }
-                            });
-
-                            let gen;
-                            if (this.#availableModels.indexOf(conversation.model) === 1) {
-                                gen = await this.#Gen1(chat, history, conversation.Users);
-                            } else if (this.#availableModels.indexOf(conversation.model) === 2) {
-                                gen = await this.#Gen2(chat, history, conversation.Users);
+    
+                                if (gen) {
+                                    await this.database.aIConversationHistory.update({
+                                        where: { conversation_id: chat.conversation_id },
+                                        data: {
+                                            response: `${gen?.response}`,
+                                        }
+                                    });
+                                    let data = gen.chat.reverse();
+    
+                                    if (data.length > 2) {
+                                        // For delete inital chats 
+                                        data.pop(); // for user side
+                                        data.pop(); // for assistant side
+                                    }
+                                    return data;
+                                }
                             } else {
                                 return $sendResponse.failed(
                                     {},
                                     this.response,
-                                    apiMessageKeys.MODEL_IS_UNSUPPORTED,
+                                    apiMessageKeys.VALUE_REQUIRED,
                                     statusCodes.UNPROCESSABLE_ENTITY
-                                );
-                            }
-
-                            if (gen) {
-                                await this.database.aIConversationHistory.update({
-                                    where: { conversation_id: chat.conversation_id },
-                                    data: {
-                                        response: `${gen?.response}`,
-                                    }
-                                });
-                                let data = gen.chat.reverse();
-
-                                if (data.length > 2) {
-                                    // For delete inital chats 
-                                    data.pop(); // for user side
-                                    data.pop(); // for assistant side
-                                }
-                                return $sendResponse.success(
-                                    data,
-                                    this.response,
-                                    apiMessageKeys.DONE,
-                                    statusCodes.OK
                                 );
                             }
                         } else {
@@ -254,6 +189,100 @@ export class AIManagementController extends Controller {
                 statusCodes.INTERNAL_SERVER_ERROR
             );
         }
+    }
+    
+    // ------------------------------------------------------------------------------
+    
+    start = async () => {
+        try {
+            let { user_id, key_name } = this.reqQuery;
+            if (user_id && JSON.parse(this.reqBody.authentication_result).session.payload.user_id == user_id) {
+                const user = await this.database.users.findUnique({ where: { id: Number(user_id) }, include: { AIConversationKeys: true, UserDetails: true } });
+                if (user) {
+                    if (!key_name) {
+                        $logged(
+                            'Error: Undefined "key_name" request',
+                            false,
+                            { file: __filename.split('/src')[1] },
+                            this.request.ip,
+                            true
+                        )
+                        return $sendResponse.failed(
+                            {},
+                            this.response,
+                            apiMessageKeys.KEY_NAME_IS_UNDEFINED,
+                            statusCodes.UNPROCESSABLE_ENTITY
+                        );
+                    } else if (key_name && !this.#availableKeys.includes(key_name)) {
+                        $logged(
+                            'Error: Unrecognizable "key_name" request',
+                            false,
+                            { file: __filename.split('/src')[1] },
+                            this.request.ip,
+                            true
+                        )
+                        return $sendResponse.failed(
+                            {},
+                            this.response,
+                            apiMessageKeys.INVALID_KEY_NAME,
+                            statusCodes.UNPROCESSABLE_ENTITY
+                        );
+                    }
+
+                    const result = await this.generateConversation({
+                        topic: aiPresets(key_name)(user.fullname, user.UserDetails?.preferred_lang),
+                        user_id,
+                        key_name,
+                        model: 'grok',
+                        okay_response: definationExamples.default.okay_response()
+                    });
+
+
+                    return $sendResponse.success(
+                        {
+                            result
+                        },
+                        this.response,
+                        apiMessageKeys.DONE,
+                        statusCodes.OK,
+                    );
+
+                }
+            }
+            return $sendResponse.failed(
+                {},
+                this.response,
+                apiMessageKeys.USER_NOT_FOUND,
+                statusCodes.NOT_FOUND
+            );
+        } catch (error: any) {
+            $logged(
+                error.message,
+                false,
+                { file: __filename.split('/src')[1] },
+                this.request.ip,
+                true
+            )
+            $sendResponse.failed(
+                {},
+                this.response,
+                apiMessageKeys.SOMETHING_WENT_WRONG,
+                statusCodes.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+    jsonGenerator = async ({ params }: { params: Record<string, any> }) => {
+        const conversation_key = params.conversation_key;
+        const data = await this.ask(conversation_key, {user_id: this.reqBody.user_id, data: this.reqBody.data});
+        if(data){
+            return $sendResponse.success(
+                definationExamples.default.resolver(data[0]),
+                this.response,
+                apiMessageKeys.DONE,
+                statusCodes.OK
+            );
+        }
+
     }
     #Gen1 = async (chat: any, history: any[], user: any) => {
         try {
