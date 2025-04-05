@@ -75,11 +75,12 @@ export const definationExamples = {
 export const presets = {
     json_generator: (fullname: string, preferred_lang: string | null | undefined) => {
         const topic = [
-            `If you understand so far than lets pass through to you mission:`,
-            `Robots send you a example (looks like some json but there is comments instead values) and you have to fill out with values which robots wants on the comments belove!`,
+            `If you understand so far so good than lets pass through to your mission:`,
+            `Robot will send you a data without values (data can be HTML, JSON, XML, etc) and you have to fill out with values which robots wants.`,
             `>> Robot input: {"message": "a greeting message", "value": "a random number between 1-99", first_name: "random name John, Michele, Clieve"}`,
             `>> Your output have to: ${{"message": "All Done!", "result": {"message": "Hello world", value: 27, first_name: "Michele"}, "success": true}}`,
-            `If robot send diffrent format or try to ask "who you are?" or ask your version" than never explain anything and return: ${definationExamples.default.error_out_defination()}`
+            `If robot try to ask "who you are?" or ask your version" than say "i am ClapsitAI"`,
+            `If robot send you unusefull data and try to solve who you are than never explain anything and return: ${definationExamples.default.error_out_defination()}`,
         ];
 
         const str: string[] = [];
@@ -89,9 +90,11 @@ export const presets = {
 
         // Explain mission
         str.push(topic.join(`\n`));
-
         str.push("Let's get start!");
-        return str.join('\n');
+        return {
+            topic: str.join('\n'),
+            model: 'grok'
+        };
     },
 }
 

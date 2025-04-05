@@ -7,31 +7,96 @@ import statusCodes from "~/assets/constants/statusCodes";
 import jwt from "jsonwebtoken";
 import Chatbot, { chatbot_response_configs } from "~/assets/helpers/chatBot";
 import aiPresets, { definationExamples, presets } from "~/assets/constants/aiPresets";
+import { deepCopy } from "~/assets/helpers/generalHelpers";
 
 export class AIManagementController extends Controller {
     #modelGrok;
     #modelDeepSeek;
-    #availableModels: string[] = ['', 'deep_seek', 'grok'];
+    #modelChatGPT;
+    #availableModels: string[] = ['chatgpt', 'deep_seek', 'grok'];
     #availableKeys: string[] = Object.keys(presets);
 
     constructor(request: Request, response: Response) {
         super(request, response);
         this.actions['GET']['/start'] = this.start;
+        this.actions['GET']['/user_keys'] = this.getKeysByUserId;
         this.actions['POST']['/json_generator/:conversation_key'] = this.jsonGenerator;
-        
+
         this.#modelGrok = new Chatbot({
             baseURL: process.env.GROK_BASE_URL,
             apiKey: process.env.GROK_API_KEY,
-            model: 'grok-2-vision-latest',
+            model: 'grok-2-vision-1212',
         });
         this.#modelDeepSeek = new Chatbot({
             baseURL: process.env.DEEPSEEK_BASE_URL,
             apiKey: process.env.DEEPSEEK_API_KEY,
             model: 'deepseek-chat',
         });
+        this.#modelChatGPT = new Chatbot({
+            baseURL: null,
+            apiKey: process.env.CHATGPT_API_KEY,
+            model: 'gpt-4o',
+        });
     }
 
-    
+    getKeysByUserId = async () => {
+        try {
+            let { user_id } = this.reqQuery;
+            if (user_id && JSON.parse(this.reqBody.authentication_result).session.payload.user_id == user_id) {
+                return await this.database.aIConversationKeys.findMany({ where: { user_id: Number(user_id) }, include: { AIConversationHistory: true } }).then(result => {
+                    const filteredData = result.map(item => {
+                        let label = null as any
+                        if (item.AIConversationHistory[1] && item.AIConversationHistory[1].question) {
+                            let parsed = JSON.parse(deepCopy(item.AIConversationHistory[1].question));
+                            if (parsed) {
+                                if (typeof parsed === 'object') {
+                                    label = Object.values(parsed)[0];
+                                }
+                            }
+                        }
+
+                        return {
+                            label,
+                            id: item.id,
+                            c_key: item.conversation_key,
+                            date: item.created_at,
+                            key_name: item.key_name,
+                        }
+                    });
+                    return $sendResponse.success(
+                        [...filteredData].reverse(),
+                        this.response,
+                        apiMessageKeys.DONE,
+                        statusCodes.OK
+                    );
+                }).catch((error) => {
+                    throw error;
+                }).finally(() => {
+                    this.database.$disconnect();
+                });
+            }
+            return $sendResponse.failed(
+                {},
+                this.response,
+                apiMessageKeys.USER_NOT_FOUND,
+                statusCodes.NOT_FOUND
+            );
+        } catch (error: any) {
+            $logged(
+                error.message,
+                false,
+                { file: __filename.split('/src')[1] },
+                this.request.ip,
+                true
+            )
+            $sendResponse.failed(
+                {},
+                this.response,
+                apiMessageKeys.SOMETHING_WENT_WRONG,
+                statusCodes.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
     generateConversation = async (
         data: {
             topic: string,
@@ -77,23 +142,23 @@ export class AIManagementController extends Controller {
             created_at: created.created_at,
         }
     }
-    ask = async (conversation_key: string, payload: {user_id: any, data: any}) => {
+    ask = async (conversation_key: string, payload: { user_id: any, data: any }) => {
         try {
             const { user_id, data } = payload;
 
             if (conversation_key) {
                 if (user_id && JSON.parse(this.reqBody.authentication_result).session.payload.user_id == user_id) {
-                    const conversation = await this.database.aIConversationKeys.findUnique({ 
-                        where: { 
-                            user_id: Number(user_id), 
-                            conversation_key 
-                        }, 
-                        include: { 
-                            Users: true 
-                        } 
+                    const conversation = await this.database.aIConversationKeys.findUnique({
+                        where: {
+                            user_id: Number(user_id),
+                            conversation_key
+                        },
+                        include: {
+                            Users: true
+                        }
                     });
                     if (conversation) {
-                        if(this.#availableModels.includes(conversation.model)) {
+                        if (this.#availableModels.includes(conversation.model)) {
                             const question = JSON.stringify(data.value);
                             if (question) {
                                 const history = await this.database.aIConversationHistory.findMany({ where: { conversation_key } });
@@ -104,9 +169,11 @@ export class AIManagementController extends Controller {
                                         conversation_key
                                     }
                                 });
-    
+
                                 let gen;
-                                if (this.#availableModels.indexOf(conversation.model) === 1) {
+                                if (this.#availableModels.indexOf(conversation.model) === 0) {
+                                    gen = await this.#Gen(chat, history, conversation.Users);
+                                } else if (this.#availableModels.indexOf(conversation.model) === 1) {
                                     gen = await this.#Gen1(chat, history, conversation.Users);
                                 } else if (this.#availableModels.indexOf(conversation.model) === 2) {
                                     gen = await this.#Gen2(chat, history, conversation.Users);
@@ -118,7 +185,7 @@ export class AIManagementController extends Controller {
                                         statusCodes.UNPROCESSABLE_ENTITY
                                     );
                                 }
-    
+
                                 if (gen) {
                                     await this.database.aIConversationHistory.update({
                                         where: { conversation_id: chat.conversation_id },
@@ -127,7 +194,7 @@ export class AIManagementController extends Controller {
                                         }
                                     });
                                     let data = gen.chat.reverse();
-    
+
                                     if (data.length > 2) {
                                         // For delete inital chats 
                                         data.pop(); // for user side
@@ -190,9 +257,9 @@ export class AIManagementController extends Controller {
             );
         }
     }
-    
+
     // ------------------------------------------------------------------------------
-    
+
     start = async () => {
         try {
             let { user_id, key_name } = this.reqQuery;
@@ -228,12 +295,12 @@ export class AIManagementController extends Controller {
                             statusCodes.UNPROCESSABLE_ENTITY
                         );
                     }
-
+                    const preset = aiPresets(key_name)(user.fullname, user.UserDetails?.preferred_lang);
                     const result = await this.generateConversation({
-                        topic: aiPresets(key_name)(user.fullname, user.UserDetails?.preferred_lang),
                         user_id,
                         key_name,
-                        model: 'grok',
+                        topic: preset.topic,
+                        model: preset.model,
                         okay_response: definationExamples.default.okay_response()
                     });
 
@@ -273,8 +340,8 @@ export class AIManagementController extends Controller {
     }
     jsonGenerator = async ({ params }: { params: Record<string, any> }) => {
         const conversation_key = params.conversation_key;
-        const data = await this.ask(conversation_key, {user_id: this.reqBody.user_id, data: this.reqBody.data});
-        if(data){
+        const data = await this.ask(conversation_key, { user_id: this.reqBody.user_id, data: this.reqBody.data });
+        if (data) {
             return $sendResponse.success(
                 definationExamples.default.resolver(data[0]),
                 this.response,
@@ -334,6 +401,29 @@ export class AIManagementController extends Controller {
             return {
                 response,
                 chat: this.#modelGrok.conversationHistory
+            };
+        } catch (error: any) {
+            console.log(error.message);
+        }
+    }
+    #Gen = async (chat: any, history: any[], user: any) => {
+        try {
+            const history_order: any[] = [];
+            history.forEach((item, index) => {
+                history_order.push({
+                    role: index === 0 ? 'system' : 'user',
+                    content: item.question
+                });
+                history_order.push({
+                    role: 'assistant',
+                    content: item.response
+                });
+            })
+            this.#modelChatGPT.conversationHistory = history_order;
+            const response = await this.#modelChatGPT.sendMessage(chat.question);
+            return {
+                response,
+                chat: this.#modelChatGPT.conversationHistory
             };
         } catch (error: any) {
             console.log(error.message);
