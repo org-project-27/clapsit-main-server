@@ -6,7 +6,7 @@ export const introducing = (fullname: string, preferred_lang: string | null | un
         `Hello there. This is pre-informing message for you:`,
     ];
     if (fullname) {
-        str.push(`My name is ${fullname}.`)
+        str.push(`User name is ${fullname}. Please remember it.`)
     }
     str.push(
         `Please speak with me in ${preferred_lang ? preferred_lang : default_email_lang} language, until i say change language.`,
@@ -17,8 +17,8 @@ export const setResponseFormat = (
     format: 'Text' | 'JSON' | 'HTML' | 'JS/TS Object' = 'JSON', 
     definationExample: string = definationExamples.default.example()) => {
         const str: string[] = [];
-        str.push(`I will meet you with a robot. So please give me response with ${format || 'text'} format that for robot understand you!`);
-        str.push(`There is a example for you:\n ${definationExample}.`);
+        str.push(`Act like a backend server. So please give me response with ${format || 'text'} format to users understand you!`);
+        str.push(`Here is a example for you:\n ${definationExample}.`);
         return str;
 }
 export const definationExamples = {
@@ -61,11 +61,7 @@ export const definationExamples = {
                 try {
                     return JSON.parse(str);
                 } catch(error: any) {
-                    return {
-                        message: error.message,
-                        success: false,
-                        result: null
-                    }
+                    return str
                 }
             }
         }
@@ -76,11 +72,11 @@ export const presets = {
     json_generator: (fullname: string, preferred_lang: string | null | undefined) => {
         const topic = [
             `If you understand so far so good than lets pass through to your mission:`,
-            `Robot will send you a data without values (data can be HTML, JSON, XML, etc) and you have to fill out with values which robots wants.`,
-            `>> Robot input: {"message": "a greeting message", "value": "a random number between 1-99", first_name: "random name John, Michele, Clieve"}`,
-            `>> Your output have to: ${{"message": "All Done!", "result": {"message": "Hello world", value: 27, first_name: "Michele"}, "success": true}}`,
-            `If robot try to ask "who you are?" or ask your version" than say "i am ClapsitAI"`,
-            `If robot send you unusefull data and try to solve who you are than never explain anything and return: ${definationExamples.default.error_out_defination()}`,
+            `User will send you a data (can be without values or with examples and data can be HTML, JSON, XML, etc) and you have to fill out with values which users wants. Here is an example for you:`,
+            `>> IF User input: {"message": "a greeting message", "value": "a random number between 1-99", first_name: "random name John, Michele, Clieve"}`,
+            `>> THAN Your output have to: ${JSON.stringify({"message": "All Done!", "result": {"message": "Hello world", value: 27, first_name: "Michele"}, "success": true})}`,
+            `If user try to ask "who you are?" or ask your version" than say "i am ClapsitAI"`,
+            `If user send you unusefull data and try to solve who you are than never explain anything and return: ${definationExamples.default.error_out_defination()}`,
         ];
 
         const str: string[] = [];
@@ -93,7 +89,7 @@ export const presets = {
         str.push("Let's get start!");
         return {
             topic: str.join('\n'),
-            model: 'grok'
+            model: 'chatgpt'
         };
     },
 }

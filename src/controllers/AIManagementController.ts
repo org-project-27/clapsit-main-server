@@ -20,7 +20,9 @@ export class AIManagementController extends Controller {
         super(request, response);
         this.actions['GET']['/start'] = this.start;
         this.actions['GET']['/user_keys'] = this.getKeysByUserId;
+        this.actions['GET']['/key_history'] = this.getHistoryByConversationId;
         this.actions['POST']['/json_generator/:conversation_key'] = this.jsonGenerator;
+        this.actions['GET']['/json_generator/:conversation_key'] = this.jsonGenerator;
 
         this.#modelGrok = new Chatbot({
             baseURL: process.env.GROK_BASE_URL,
@@ -46,12 +48,17 @@ export class AIManagementController extends Controller {
                 return await this.database.aIConversationKeys.findMany({ where: { user_id: Number(user_id) }, include: { AIConversationHistory: true } }).then(result => {
                     const filteredData = result.map(item => {
                         let label = null as any
-                        if (item.AIConversationHistory[1] && item.AIConversationHistory[1].question) {
-                            let parsed = JSON.parse(deepCopy(item.AIConversationHistory[1].question));
-                            if (parsed) {
-                                if (typeof parsed === 'object') {
-                                    label = Object.values(parsed)[0];
+                        const targetHistory = item.AIConversationHistory[item.AIConversationHistory.length - 1];
+                        if (targetHistory && targetHistory.question ) {
+                            try {
+                                let parsed = JSON.parse(deepCopy(targetHistory.question));
+                                if (parsed) {
+                                    if (typeof parsed === 'object') {
+                                        label = Object.values(parsed)[0];
+                                    }
                                 }
+                            } catch(error: any) {
+                                label = null;
                             }
                         }
 
@@ -65,6 +72,62 @@ export class AIManagementController extends Controller {
                     });
                     return $sendResponse.success(
                         [...filteredData].reverse(),
+                        this.response,
+                        apiMessageKeys.DONE,
+                        statusCodes.OK
+                    );
+                }).catch((error) => {
+                    throw error;
+                }).finally(() => {
+                    this.database.$disconnect();
+                });
+            }
+            return $sendResponse.failed(
+                {},
+                this.response,
+                apiMessageKeys.USER_NOT_FOUND,
+                statusCodes.NOT_FOUND
+            );
+        } catch (error: any) {
+            $logged(
+                error.message,
+                false,
+                { file: __filename.split('/src')[1] },
+                this.request.ip,
+                true
+            )
+            $sendResponse.failed(
+                {},
+                this.response,
+                apiMessageKeys.SOMETHING_WENT_WRONG,
+                statusCodes.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+    getHistoryByConversationId = async () => {
+        try {
+            let { key_id, user_id } = this.reqQuery;
+            if (user_id && JSON.parse(this.reqBody.authentication_result).session.payload.user_id == user_id) {
+                return await this.database.aIConversationKeys.findFirst({ where: { id: Number(key_id) }, include: { AIConversationHistory: true } }).then(result => {
+                    let data = result?.AIConversationHistory.map(item => {
+                        return {
+                            c_id: item.conversation_id,
+                            c_key: item.conversation_key,
+                            input: definationExamples.default.resolver({
+                                role: 'user',
+                                content: item.question
+                            }),
+                            output: definationExamples.default.resolver({
+                                role: 'assistant',
+                                content: item.response
+                            }),
+                            date: item.created_at
+                        }
+                    });
+                    data?.shift();
+                    data = data?.reverse();
+                    return $sendResponse.success(
+                        data,
                         this.response,
                         apiMessageKeys.DONE,
                         statusCodes.OK
