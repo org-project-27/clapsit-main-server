@@ -89,7 +89,7 @@ export const presets = {
         str.push("Let's get start!");
         return {
             topic: str.join('\n'),
-            model: 'chatgpt'
+            model: 'grok'
         };
     },
 }
