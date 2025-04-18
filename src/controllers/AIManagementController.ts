@@ -6,15 +6,15 @@ import apiMessageKeys from "~/assets/constants/apiMessageKeys";
 import statusCodes from "~/assets/constants/statusCodes";
 import jwt from "jsonwebtoken";
 import Chatbot, { chatbot_response_configs } from "~/assets/helpers/chatBot";
-import aiPresets, { definationExamples, presets } from "~/assets/constants/aiPresets";
+import aiPresets, { AvailableKeyNames, AvailableModels, definationExamples, presets } from "~/assets/constants/aiPresets";
 import { deepCopy } from "~/assets/helpers/generalHelpers";
 
 export class AIManagementController extends Controller {
     #modelGrok;
     #modelDeepSeek;
     #modelChatGPT;
-    #availableModels: string[] = ['chatgpt', 'deep_seek', 'grok'];
-    #availableKeys: string[] = Object.keys(presets);
+    #availableModels: string[] = ['chatgpt', 'deep_seek', 'grok'] as AvailableModels[];
+    #availableKeys: string[] = Object.keys(presets) as AvailableKeyNames[];
 
     constructor(request: Request, response: Response) {
         super(request, response);
@@ -22,7 +22,7 @@ export class AIManagementController extends Controller {
         this.actions['GET']['/user_keys'] = this.getKeysByUserId;
         this.actions['GET']['/key_history'] = this.getHistoryByConversationId;
         this.actions['POST']['/json_generator/:conversation_key'] = this.jsonGenerator;
-        this.actions['GET']['/json_generator/:conversation_key'] = this.jsonGenerator;
+        this.actions['POST']['/ai_translator/:conversation_key'] = this.aiTranslator;
 
         this.#modelGrok = new Chatbot({
             baseURL: process.env.GROK_BASE_URL,
@@ -49,15 +49,23 @@ export class AIManagementController extends Controller {
                     const filteredData = result.map(item => {
                         let label = null as any
                         const targetHistory = item.AIConversationHistory[item.AIConversationHistory.length - 1];
-                        if (targetHistory && targetHistory.question ) {
+                        if (targetHistory && targetHistory.question) {
                             try {
                                 let parsed = JSON.parse(deepCopy(targetHistory.question));
                                 if (parsed) {
                                     if (typeof parsed === 'object') {
                                         label = Object.values(parsed)[0];
+                                        if (typeof label === 'object') {
+                                            if (label.message) {
+                                                label = label.message;
+                                            }
+                                            if (label.input) {
+                                                label = label.input;
+                                            }
+                                        }
                                     }
                                 }
-                            } catch(error: any) {
+                            } catch (error: any) {
                                 label = null;
                             }
                         }
@@ -205,16 +213,18 @@ export class AIManagementController extends Controller {
             created_at: created.created_at,
         }
     }
-    ask = async (conversation_key: string, payload: { user_id: any, data: any }) => {
+    ask = async (cData: { conversation_key: string, key_name: AvailableKeyNames }, payload: { user_id: any, data: any }) => {
         try {
             const { user_id, data } = payload;
+            const { conversation_key, key_name } = cData;
 
             if (conversation_key) {
                 if (user_id && JSON.parse(this.reqBody.authentication_result).session.payload.user_id == user_id) {
                     const conversation = await this.database.aIConversationKeys.findUnique({
                         where: {
                             user_id: Number(user_id),
-                            conversation_key
+                            conversation_key: conversation_key.toString(),
+                            key_name: key_name.toString()
                         },
                         include: {
                             Users: true
@@ -224,7 +234,8 @@ export class AIManagementController extends Controller {
                         if (this.#availableModels.includes(conversation.model)) {
                             const question = JSON.stringify(data.value);
                             if (question) {
-                                const history = await this.database.aIConversationHistory.findMany({ where: { conversation_key } });
+                                // @ts-ignore
+                                const history: any[] = await this.getFirstAndLastRows(conversation_key); // these function i add to decrease token usage
                                 const chat = await this.database.aIConversationHistory.create({
                                     data: {
                                         question,
@@ -403,7 +414,7 @@ export class AIManagementController extends Controller {
     }
     jsonGenerator = async ({ params }: { params: Record<string, any> }) => {
         const conversation_key = params.conversation_key;
-        const data = await this.ask(conversation_key, { user_id: this.reqBody.user_id, data: this.reqBody.data });
+        const data = await this.ask({ conversation_key, key_name: 'json_generator' }, { user_id: this.reqBody.user_id, data: this.reqBody.data });
         if (data) {
             return $sendResponse.success(
                 definationExamples.default.resolver(data[0]),
@@ -413,6 +424,18 @@ export class AIManagementController extends Controller {
             );
         }
 
+    }
+    aiTranslator = async ({ params }: { params: Record<string, any> }) => {
+        const conversation_key = params.conversation_key;
+        const data = await this.ask({ conversation_key, key_name: 'ai_translator' }, { user_id: this.reqBody.user_id, data: this.reqBody.data });
+        if (data) {
+            return $sendResponse.success(
+                definationExamples.default.resolver(data[0]),
+                this.response,
+                apiMessageKeys.DONE,
+                statusCodes.OK
+            );
+        }
     }
     #Gen1 = async (chat: any, history: any[], user: any) => {
         try {
@@ -492,6 +515,35 @@ export class AIManagementController extends Controller {
             console.log(error.message);
         }
     }
+    getFirstAndLastRows = async (conversationKey: string, count = 2) => {
+        const prisma = this.database;
+        try {
+            const rows = await prisma.$queryRaw`
+            WITH FilteredRows AS (
+              SELECT *
+              FROM AIConversationHistory
+              WHERE conversation_key = ${conversationKey}
+            ),
+            RankedRows AS (
+              SELECT *,
+                     ROW_NUMBER() OVER () AS row_num,
+                     COUNT(*) OVER () AS total_rows
+              FROM FilteredRows
+            )
+            SELECT *
+            FROM RankedRows
+            WHERE row_num <= ${count} OR row_num > total_rows - ${count}
+            ORDER BY row_num;
+          `;
+            return rows;
+        } catch (error) {
+            console.error('Error executing query:', error);
+            throw error;
+        } finally {
+            await prisma.$disconnect();
+        }
+    }
+
 }
 
 export default $callToAction(AIManagementController);
