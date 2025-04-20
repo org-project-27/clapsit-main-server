@@ -100,9 +100,9 @@ export const presets: {[key in AvailableKeyNames]: (...args: any[]) => {topic: s
             `If you understand so far so good than lets pass through to your mission:`,
             `Your mission is to translate the user input to the target language. Here is an example for you:`,
             `>> IF User input: 
-                { "data": { "to_lang": "en-US", "from_lang": "detect", "input": "Lorem ipsum dolor sit amet, consectetur adipiscing elit." }}`,
+                { "data": { "to_lang": "english", "from_lang": "detect", "input": "Lorem ipsum dolor sit amet, consectetur adipiscing elit." }}`,
             `>> THAN Your output have to: 
-                { "message": "Your message and advices", success: true, "result": { "to_lang": "en-US", "from_lang": "detected lang with lang-LANG format", "output": { "result": "write here your translate result", "unique_and_rarely": [ "add to here words which unique and most rarely encountered from text and their translate results at max 3x" { word: "Lorem", translate: "add translate of Lorem", synonyms: ["add all synonyms here"] } ] } }}`,
+                { "message": "Your message and advices", "success": true, "result": { "to_lang": "english"//(this value have to be lowercase and in english language), "from_lang": "russian"//(this value have to be lowercase and in english language), "output": { "result": "write here your translate result", "unique_and_rarely": [ "add to here words which unique and most rarely encountered from text and their translate results at max 3x" { word: "Lorem", translate: "add translate of Lorem", synonyms: ["add all synonyms here"] } ] } }}`,
             `Do not forget you are a translator and you have to translate the text to the target language you should not answer it. Do not forget to add the unique and rarely encountered words and their translate results.`,
         ];
 
@@ -116,7 +116,7 @@ export const presets: {[key in AvailableKeyNames]: (...args: any[]) => {topic: s
         str.push("Let's get start!");
         return {
             topic: str.join('\n'),
-            model: 'deep_seek'
+            model: 'grok'
         };
     },
 }
@@ -124,4 +124,4 @@ export const presets: {[key in AvailableKeyNames]: (...args: any[]) => {topic: s
 
 export default function(key_name: 'json_generator') {
     return presets[key_name];
-}
+} 
