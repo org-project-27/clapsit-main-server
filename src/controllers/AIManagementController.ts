@@ -20,7 +20,16 @@ export class AIManagementController extends Controller {
         super(request, response);
         this.actions['GET']['/start'] = this.start;
         this.actions['GET']['/user_keys'] = this.getKeysByUserId;
-        this.actions['GET']['/key_history'] = this.getHistoryByConversationId;
+        this.actions['GET']['/key_history'] = this.getHistoryByKeyId;
+
+        this.actions['PATCH']['/user_keys/:key_id'] = this.saveKeyById;
+        this.actions['DELETE']['/user_keys/:key_id'] = this.deleteKeyById;
+        this.actions['DELETE']['/user_keys'] = this.deleteAllKeysByUserId;
+
+        this.actions['PATCH']['/key_history/:conversation_id'] = this.saveHistoryByConversationId;
+        this.actions['DELETE']['/key_history/:conversation_id'] = this.deleteHistoryByConversationId;
+
+        this.actions['GET']['/json_generator/:conversation_id'] = this.jsonGeneratorById;
         this.actions['POST']['/json_generator/:conversation_key'] = this.jsonGenerator;
         this.actions['POST']['/ai_translator/:conversation_key'] = this.aiTranslator;
 
@@ -74,6 +83,7 @@ export class AIManagementController extends Controller {
                             label,
                             id: item.id,
                             c_key: item.conversation_key,
+                            save: item.saved,
                             date: item.created_at,
                             key_name: item.key_name,
                         }
@@ -112,7 +122,154 @@ export class AIManagementController extends Controller {
             );
         }
     }
-    getHistoryByConversationId = async () => {
+    saveKeyById = async ({ params }: { params: Record<string, any> }) => {
+        try {
+            const key_id = params.key_id;
+            let { user_id, save } = this.reqBody;
+            if (user_id && JSON.parse(this.reqBody.authentication_result).session.payload.user_id == user_id) {
+                return await this.database.aIConversationKeys.update({
+                    where: { id: Number(key_id) },
+                    data: {
+                        saved: !!save
+                    }
+                }).then(result => {
+                    return $sendResponse.success(
+                        { saved: result.saved },
+                        this.response,
+                        apiMessageKeys.DONE,
+                        statusCodes.OK
+                    );
+                }).catch((error) => {
+                    return $sendResponse.failed(
+                        {},
+                        this.response,
+                        apiMessageKeys.KEY_NOT_FOUND,
+                        statusCodes.NOT_FOUND
+                    );
+                }).finally(() => {
+                    this.database.$disconnect();
+                });
+            } else {
+                return $sendResponse.failed(
+                    {},
+                    this.response,
+                    apiMessageKeys.USER_NOT_FOUND,
+                    statusCodes.NOT_FOUND
+                );
+            }
+        } catch (error: any) {
+            $logged(
+                error.message,
+                false,
+                { file: __filename.split('/src')[1] },
+                this.request.ip,
+                true
+            )
+            $sendResponse.failed(
+                {},
+                this.response,
+                apiMessageKeys.SOMETHING_WENT_WRONG,
+                statusCodes.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+    deleteKeyById = async ({ params }: { params: Record<string, any> }) => {
+        try {
+            const key_id = params.key_id;
+            let { user_id } = this.reqQuery;
+            if (user_id && JSON.parse(this.reqBody.authentication_result).session.payload.user_id == user_id) {
+                return await this.database.aIConversationKeys.delete({
+                    where: { id: Number(key_id) },
+                }).then(result => {
+                    return $sendResponse.success(
+                        { deleted: result.id },
+                        this.response,
+                        apiMessageKeys.DONE,
+                        statusCodes.OK
+                    );
+                }).catch((error) => {
+                    return $sendResponse.failed(
+                        {},
+                        this.response,
+                        apiMessageKeys.KEY_NOT_FOUND,
+                        statusCodes.NOT_FOUND
+                    );
+                }).finally(() => {
+                    this.database.$disconnect();
+                });
+            } else {
+                return $sendResponse.failed(
+                    {},
+                    this.response,
+                    apiMessageKeys.USER_NOT_FOUND,
+                    statusCodes.NOT_FOUND
+                );
+            }
+        } catch (error: any) {
+            $logged(
+                error.message,
+                false,
+                { file: __filename.split('/src')[1] },
+                this.request.ip,
+                true
+            )
+            $sendResponse.failed(
+                {},
+                this.response,
+                apiMessageKeys.SOMETHING_WENT_WRONG,
+                statusCodes.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+    deleteAllKeysByUserId = async () => {
+        try {
+            let { user_id } = this.reqQuery;
+            if (user_id && JSON.parse(this.reqBody.authentication_result).session.payload.user_id == user_id) {
+                return await this.database.aIConversationKeys.deleteMany({
+                    where: { user_id },
+                }).then(result => {
+                    return $sendResponse.success(
+                        { deleted: result.count },
+                        this.response,
+                        apiMessageKeys.DONE,
+                        statusCodes.OK
+                    );
+                }).catch((error) => {
+                    return $sendResponse.failed(
+                        {},
+                        this.response,
+                        apiMessageKeys.SOMETHING_WENT_WRONG,
+                        statusCodes.UNPROCESSABLE_ENTITY
+                    );
+                }).finally(() => {
+                    this.database.$disconnect();
+                });
+            } else {
+                return $sendResponse.failed(
+                    {},
+                    this.response,
+                    apiMessageKeys.USER_NOT_FOUND,
+                    statusCodes.NOT_FOUND
+                );
+            }
+        } catch (error: any) {
+            $logged(
+                error.message,
+                false,
+                { file: __filename.split('/src')[1] },
+                this.request.ip,
+                true
+            )
+            $sendResponse.failed(
+                {},
+                this.response,
+                apiMessageKeys.SOMETHING_WENT_WRONG,
+                statusCodes.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    getHistoryByKeyId = async () => {
         try {
             let { key_id, user_id } = this.reqQuery;
             if (user_id && JSON.parse(this.reqBody.authentication_result).session.payload.user_id == user_id) {
@@ -129,6 +286,7 @@ export class AIManagementController extends Controller {
                                 role: 'assistant',
                                 content: item.response
                             }),
+                            save: item.saved,
                             date: item.created_at
                         }
                     });
@@ -168,6 +326,106 @@ export class AIManagementController extends Controller {
             );
         }
     }
+    saveHistoryByConversationId = async ({ params }: { params: Record<string, any> }) => {
+        try {
+            const c_id = params.conversation_id;
+            let { user_id, save } = this.reqBody;
+            if (user_id && JSON.parse(this.reqBody.authentication_result).session.payload.user_id == user_id) {
+                return await this.database.aIConversationHistory.update({
+                    where: { conversation_id: Number(c_id) },
+                    data: {
+                        saved: !!save
+                    }
+                }).then(result => {
+                    return $sendResponse.success(
+                        { saved: result.saved },
+                        this.response,
+                        apiMessageKeys.DONE,
+                        statusCodes.OK
+                    );
+                }).catch((error) => {
+                    return $sendResponse.failed(
+                        {},
+                        this.response,
+                        apiMessageKeys.KEY_NOT_FOUND,
+                        statusCodes.NOT_FOUND
+                    );
+                }).finally(() => {
+                    this.database.$disconnect();
+                });
+            } else {
+                return $sendResponse.failed(
+                    {},
+                    this.response,
+                    apiMessageKeys.USER_NOT_FOUND,
+                    statusCodes.NOT_FOUND
+                );
+            }
+        } catch (error: any) {
+            $logged(
+                error.message,
+                false,
+                { file: __filename.split('/src')[1] },
+                this.request.ip,
+                true
+            )
+            $sendResponse.failed(
+                {},
+                this.response,
+                apiMessageKeys.SOMETHING_WENT_WRONG,
+                statusCodes.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+    deleteHistoryByConversationId = async ({ params }: { params: Record<string, any> }) => {
+        try {
+            const c_id = params.conversation_id;
+            let { user_id } = this.reqQuery;
+            if (user_id && JSON.parse(this.reqBody.authentication_result).session.payload.user_id == user_id) {
+                return await this.database.aIConversationHistory.delete({
+                    where: { conversation_id: Number(c_id) },
+                }).then(result => {
+                    return $sendResponse.success(
+                        { deleted: result.conversation_id },
+                        this.response,
+                        apiMessageKeys.DONE,
+                        statusCodes.OK
+                    );
+                }).catch((error) => {
+                    return $sendResponse.failed(
+                        {},
+                        this.response,
+                        apiMessageKeys.KEY_NOT_FOUND,
+                        statusCodes.NOT_FOUND
+                    );
+                }).finally(() => {
+                    this.database.$disconnect();
+                });
+            } else {
+                return $sendResponse.failed(
+                    {},
+                    this.response,
+                    apiMessageKeys.USER_NOT_FOUND,
+                    statusCodes.NOT_FOUND
+                );
+            }
+        } catch (error: any) {
+            $logged(
+                error.message,
+                false,
+                { file: __filename.split('/src')[1] },
+                this.request.ip,
+                true
+            )
+            $sendResponse.failed(
+                {},
+                this.response,
+                apiMessageKeys.SOMETHING_WENT_WRONG,
+                statusCodes.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
     generateConversation = async (
         data: {
             topic: string,
@@ -424,6 +682,57 @@ export class AIManagementController extends Controller {
             );
         }
 
+    }
+    jsonGeneratorById = async ({ params }: { params: Record<string, any> }) => {
+        if (params.conversation_id) {
+            const conversation_id = Number(params.conversation_id);
+            if(conversation_id) {
+                const history = await this.database.aIConversationHistory.findFirst({where: {conversation_id}});
+                if(history) {
+                    const key = await this.database.aIConversationKeys.findFirst({where: {conversation_key: history.conversation_key}});
+                    if(key && key.key_name === 'json_generator') {
+                        // This is for bypass auth and check user_id validation
+                        this.reqBody.authentication_result = JSON.stringify({session: {payload: {user_id: key.user_id}}});
+
+                        let value;
+                        if(history.question) {
+                            value = JSON.parse(history.question);
+                            if(!value['message'].startsWith('API: ')) {
+                                value['message'] = `API: ${value['message']}`
+                            }
+                        } else {
+                            value = {message: "API: <Empty query>", result: {}}
+                        }
+
+                        const data = await this.ask(
+                            { conversation_key: history.conversation_key, key_name: 'json_generator' }, 
+                            { user_id: key.user_id, data: { value } }
+                        );
+                        if (data) {
+                            return $sendResponse.success(
+                                definationExamples.default.resolver(data[0]).result,
+                                this.response,
+                                apiMessageKeys.DONE,
+                                statusCodes.OK
+                            );
+                        }
+                        return null;
+                    }
+                }
+                return $sendResponse.failed(
+                    {},
+                    this.response,
+                    apiMessageKeys.KEY_NOT_FOUND,
+                    statusCodes.NOT_FOUND
+                );
+            }
+        }
+        return $sendResponse.failed(
+            {},
+            this.response,
+            apiMessageKeys.VALUE_REQUIRED,
+            statusCodes.UNPROCESSABLE_ENTITY
+        );
     }
     aiTranslator = async ({ params }: { params: Record<string, any> }) => {
         const conversation_key = params.conversation_key;
