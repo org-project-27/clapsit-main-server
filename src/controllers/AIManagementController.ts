@@ -8,6 +8,7 @@ import jwt from "jsonwebtoken";
 import Chatbot, { chatbot_response_configs } from "~/assets/helpers/chatBot";
 import aiPresets, { AvailableKeyNames, AvailableModels, definationExamples, presets } from "~/assets/constants/aiPresets";
 import { deepCopy } from "~/assets/helpers/generalHelpers";
+import bcrypt from "bcrypt";
 
 export class AIManagementController extends Controller {
     #modelGrok;
@@ -443,9 +444,12 @@ export class AIManagementController extends Controller {
             okay_response,
         } = data;
         // Create converstation key:
-        const token = jwt.sign({ user_id, model, key_name }, process.env.ACCESS_TOKEN_SECRET!);
-        const conversation_key = token.split('.').reverse().join('CIT');
-
+        let conversation_key = await bcrypt.hash(
+            [user_id, model, key_name, process.env.APP_BRAND_NAME?.toLowerCase()].join('-'),
+            10
+        );
+        conversation_key = conversation_key.split('$2b$10$')[1];
+        conversation_key = conversation_key.split('/').join('$');
 
         // Register converstation key:
         const created = await this.database.aIConversationKeys.create({
