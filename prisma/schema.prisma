@@ -34,7 +34,7 @@ model TokenSessions {
 }
 
 model UserDetails {
-  phone            String?         @unique(map: "phone") @db.VarChar(255)
+  phone            String?         @db.VarChar(255)
   birthday         DateTime?       @db.Date
   bio              String?         @db.VarChar(510)
   email_registered Boolean
@@ -78,6 +78,7 @@ model AIConversationHistory {
   response           String             @db.Text
   created_at         DateTime           @default(now()) @db.DateTime(0)
   saved              Boolean?           @default(false)
+  pre_informing      Boolean?           @default(false)
   AIConversationKeys AIConversationKeys @relation(fields: [conversation_key], references: [conversation_key], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([conversation_key], map: "conversation_key")

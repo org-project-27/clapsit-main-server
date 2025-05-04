@@ -22,6 +22,8 @@ export class AIManagementController extends Controller {
         this.actions['GET']['/start'] = this.start;
         this.actions['GET']['/user_keys'] = this.getKeysByUserId;
         this.actions['GET']['/key_history'] = this.getHistoryByKeyId;
+        this.actions['GET']['/key_history/saved'] = this.getUserSavedHistories;
+        this.actions['GET']['/key_history/recently'] = this.getUserRecentlyHistories;
 
         this.actions['PATCH']['/user_keys/:key_id'] = this.saveKeyById;
         this.actions['DELETE']['/user_keys/:key_id'] = this.deleteKeyById;
@@ -57,7 +59,6 @@ export class AIManagementController extends Controller {
             if (user_id && JSON.parse(this.reqBody.authentication_result).session.payload.user_id == user_id) {
                 return await this.database.aIConversationKeys.findMany({ where: { user_id: Number(user_id) }, include: { AIConversationHistory: true } }).then(result => {
                     result = result.filter((item, index) => item.AIConversationHistory.length > 1 || index === result.length - 1);
-                            
                     const filteredData = result.map(item => {
                         let label = null as any
                         const targetHistory = item.AIConversationHistory[item.AIConversationHistory.length - 1];
@@ -271,7 +272,6 @@ export class AIManagementController extends Controller {
             );
         }
     }
-
     getHistoryByKeyId = async () => {
         try {
             let { key_id, user_id } = this.reqQuery;
@@ -290,7 +290,8 @@ export class AIManagementController extends Controller {
                                 content: item.response
                             }),
                             save: item.saved,
-                            date: item.created_at
+                            date: item.created_at,
+                            key_name: result.key_name,
                         }
                     });
                     data?.shift();
@@ -327,6 +328,140 @@ export class AIManagementController extends Controller {
                 apiMessageKeys.SOMETHING_WENT_WRONG,
                 statusCodes.INTERNAL_SERVER_ERROR
             );
+        }
+    }
+    getUserSavedHistories = async () => {
+        try {
+            let { user_id } = this.reqQuery;
+            if (user_id && JSON.parse(this.reqBody.authentication_result).session.payload.user_id == user_id) {
+                const conversationKeys = await this.database.aIConversationKeys.findMany({
+                    where: { user_id: parseInt(user_id) },
+                    select: { conversation_key: true },
+                });
+                const conversationKeyValues = conversationKeys.map((key) => key.conversation_key);
+                const savedHistories = await this.database.aIConversationHistory.findMany({
+                    where: {
+                        conversation_key: { in: conversationKeyValues },
+                        saved: true,
+                    },
+                });
+
+                let data = savedHistories.map(item => {
+                    return {
+                        c_id: item.conversation_id,
+                        c_key: item.conversation_key,
+                        input: definationExamples.default.resolver({
+                            role: 'user',
+                            content: item.question
+                        }),
+                        output: definationExamples.default.resolver({
+                            role: 'assistant',
+                            content: item.response
+                        }),
+                        save: item.saved,
+                        date: item.created_at,
+                    }
+                });
+                
+                data = data?.reverse();
+                return $sendResponse.success(
+                    data,
+                    this.response,
+                    apiMessageKeys.DONE,
+                    statusCodes.OK
+                );
+            }
+            return $sendResponse.failed(
+                {},
+                this.response,
+                apiMessageKeys.USER_NOT_FOUND,
+                statusCodes.NOT_FOUND
+            );
+        } catch (error: any) {
+            $logged(
+                error.message,
+                false,
+                { file: __filename.split('/src')[1] },
+                this.request.ip,
+                true
+            )
+            $sendResponse.failed(
+                {},
+                this.response,
+                apiMessageKeys.SOMETHING_WENT_WRONG,
+                statusCodes.INTERNAL_SERVER_ERROR
+            );
+        } finally {
+            this.database.$disconnect();
+        }
+    }
+    getUserRecentlyHistories = async () => {
+        try {
+            let { user_id } = this.reqQuery;
+            if (user_id && JSON.parse(this.reqBody.authentication_result).session.payload.user_id == user_id) {
+                const conversationKeys = await this.database.aIConversationKeys.findMany({
+                    where: { user_id: parseInt(user_id) },
+                    select: { conversation_key: true, AIConversationHistory: true },
+                });
+                let conversationKeysFiltered = conversationKeys.filter((key) => key.AIConversationHistory.length > 1);
+                let conversationKeyValues = conversationKeysFiltered.map((key) => key.conversation_key);
+                const savedHistories = await this.database.aIConversationHistory.findMany({
+                    where: {
+                        conversation_key: { in: conversationKeyValues },
+                        pre_informing: false
+                    },
+                    orderBy: {
+                        conversation_id: 'desc'
+                    },
+                    take: 10
+                });
+
+                let data = savedHistories.map(item => {
+                    return {
+                        c_id: item.conversation_id,
+                        c_key: item.conversation_key,
+                        input: definationExamples.default.resolver({
+                            role: 'user',
+                            content: item.question
+                        }),
+                        output: definationExamples.default.resolver({
+                            role: 'assistant',
+                            content: item.response
+                        }),
+                        save: item.saved,
+                        date: item.created_at,
+                    }
+                });
+                
+                return $sendResponse.success(
+                    data,
+                    this.response,
+                    apiMessageKeys.DONE,
+                    statusCodes.OK
+                );
+            }
+            return $sendResponse.failed(
+                {},
+                this.response,
+                apiMessageKeys.USER_NOT_FOUND,
+                statusCodes.NOT_FOUND
+            );
+        } catch (error: any) {
+            $logged(
+                error.message,
+                false,
+                { file: __filename.split('/src')[1] },
+                this.request.ip,
+                true
+            )
+            $sendResponse.failed(
+                {},
+                this.response,
+                apiMessageKeys.SOMETHING_WENT_WRONG,
+                statusCodes.INTERNAL_SERVER_ERROR
+            );
+        } finally {
+            this.database.$disconnect();
         }
     }
     saveHistoryByConversationId = async ({ params }: { params: Record<string, any> }) => {
@@ -428,7 +563,6 @@ export class AIManagementController extends Controller {
             );
         }
     }
-
     generateConversation = async (
         data: {
             topic: string,
@@ -436,7 +570,8 @@ export class AIManagementController extends Controller {
             model: string,
             key_name: string,
             okay_response: string,
-        }
+        },
+        pre_informing: boolean = false
     ) => {
         const {
             topic,
@@ -467,7 +602,8 @@ export class AIManagementController extends Controller {
             data: {
                 conversation_key,
                 question: topic,
-                response: okay_response
+                response: okay_response,
+                pre_informing,
             }
         });
 
@@ -640,7 +776,7 @@ export class AIManagementController extends Controller {
                         topic: preset.topic,
                         model: preset.model,
                         okay_response: definationExamples.default.okay_response()
-                    });
+                    }, true);
 
 
                     return $sendResponse.success(
@@ -692,26 +828,26 @@ export class AIManagementController extends Controller {
     jsonGeneratorById = async ({ params }: { params: Record<string, any> }) => {
         if (params.conversation_id) {
             const conversation_id = Number(params.conversation_id);
-            if(conversation_id) {
-                const history = await this.database.aIConversationHistory.findFirst({where: {conversation_id}});
-                if(history) {
-                    const key = await this.database.aIConversationKeys.findFirst({where: {conversation_key: history.conversation_key}});
-                    if(key && key.key_name === 'json_generator') {
+            if (conversation_id) {
+                const history = await this.database.aIConversationHistory.findFirst({ where: { conversation_id } });
+                if (history) {
+                    const key = await this.database.aIConversationKeys.findFirst({ where: { conversation_key: history.conversation_key } });
+                    if (key && key.key_name === 'json_generator') {
                         // This is for bypass auth and check user_id validation
-                        this.reqBody.authentication_result = JSON.stringify({session: {payload: {user_id: key.user_id}}});
+                        this.reqBody.authentication_result = JSON.stringify({ session: { payload: { user_id: key.user_id } } });
 
                         let value;
-                        if(history.question) {
+                        if (history.question) {
                             value = JSON.parse(history.question);
-                            if(!value['message'].startsWith('API: ')) {
+                            if (!value['message'].startsWith('API: ')) {
                                 value['message'] = `API: ${value['message']}`
                             }
                         } else {
-                            value = {message: "API: <Empty query>", result: {}}
+                            value = { message: "API: <Empty query>", result: {} }
                         }
 
                         const data = await this.ask(
-                            { conversation_key: history.conversation_key, key_name: 'json_generator' }, 
+                            { conversation_key: history.conversation_key, key_name: 'json_generator' },
                             { user_id: key.user_id, data: { value } }
                         );
                         if (data) {
