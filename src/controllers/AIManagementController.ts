@@ -56,6 +56,8 @@ export class AIManagementController extends Controller {
             let { user_id } = this.reqQuery;
             if (user_id && JSON.parse(this.reqBody.authentication_result).session.payload.user_id == user_id) {
                 return await this.database.aIConversationKeys.findMany({ where: { user_id: Number(user_id) }, include: { AIConversationHistory: true } }).then(result => {
+                    result = result.filter((item, index) => item.AIConversationHistory.length > 1 || index === result.length - 1);
+                            
                     const filteredData = result.map(item => {
                         let label = null as any
                         const targetHistory = item.AIConversationHistory[item.AIConversationHistory.length - 1];
