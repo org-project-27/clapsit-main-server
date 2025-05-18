@@ -362,7 +362,7 @@ export class AIManagementController extends Controller {
                         date: item.created_at,
                     }
                 });
-                
+
                 data = data?.reverse();
                 return $sendResponse.success(
                     data,
@@ -432,7 +432,7 @@ export class AIManagementController extends Controller {
                         date: item.created_at,
                     }
                 });
-                
+
                 return $sendResponse.success(
                     data,
                     this.response,
@@ -966,7 +966,7 @@ export class AIManagementController extends Controller {
             console.log(error.message);
         }
     }
-    getFirstAndLastRows = async (conversationKey: string, count = 2) => {
+    getFirstAndLastRows = async (conversationKey: string, count = 30) => {
         const prisma = this.database;
         try {
             const rows = await prisma.$queryRaw`
