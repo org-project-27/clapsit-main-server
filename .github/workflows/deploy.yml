@@ -35,7 +35,7 @@ jobs:
             git checkout main
             git pull
             rm -rf ./dist
-            pnpm run build:dokcer
+            pnpm run build:docker
           EOF
       
       - name: Update deployment status to success
