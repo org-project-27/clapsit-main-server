@@ -31,6 +31,7 @@ jobs:
       - name: Deploy to Server
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+            docker stop clapsit-main-server-express_build
             cd ~/websites/clapsit.com/clapsit-main-server
             git checkout main
             git pull
