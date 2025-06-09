@@ -6,6 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 0",
     "start": "node dist/bin/www.js",
+    "dev:docker": "docker compose up -d; docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build",
     "dev": "npx nodemon --exec ts-node src/bin/www.ts",
     "db:pull": "npx prisma db pull",
     "db:deploy": "npx prisma migrate deploy",
@@ -13,7 +14,9 @@
     "db:reset": "npx prisma migrate reset",
     "db:seed": "ts-node prisma/seed.ts",
     "db:studio": "npx prisma studio",
+    "db:generate": "npx prisma generate",
     "build": "tsc && tsc-alias",
+    "build:docker": "docker compose up -d; docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build",
     "deploy": "tsc && tsc-alias; node dist/bin/www.js"
   },
   "keywords": [],
@@ -81,6 +84,7 @@
     "#helpers": "src/assets/helpers",
     "#types": "src/assets/types"
   },
+  "packageManager": "pnpm@10.3.0",
   "pnpm": {
     "onlyBuiltDependencies": [
       "@prisma/client",

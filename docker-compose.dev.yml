@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+  express:
+    container_name: clapsit-main-server-express_dev
+    ports:
+      - "3333:3333"
+    depends_on:
+      - mysql
+    volumes:
+      - .:/clapsit/clapsit-main-sever
+      - /clapsit/clapsit-main-server/node_modules
+    command: sh -c "pnpm run db:generate && pnpm run db:deploy && pnpm run dev"
+  

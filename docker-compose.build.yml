@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+  express:
+    container_name: clapsit-main-server-express_build
+    ports:
+      - "3001:3001"
+    depends_on:
+      - mysql
+    volumes:
+      - .:/clapsit/clapsit-main-sever
+      - /clapsit/clapsit-main-server/node_modules
+    command: sh -c "pnpm prisma generate && pnpm prisma migrate deploy && pnpm run deploy"
+  
