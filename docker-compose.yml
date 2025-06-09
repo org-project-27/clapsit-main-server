@@ -1,0 +1,28 @@
+version: '3.8'
+services:
+  express:
+    build:
+      context: . 
+      dockerfile: Dockerfile
+    depends_on: 
+      - mysql
+    env_file: 
+      - .env
+    networks: 
+      - clapsit-network
+  mysql:
+    container_name: clapsit-main-server-mysql
+    image: mysql:8.0
+    ports: 
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    env_file: 
+      - .env
+    networks:
+      - clapsit-network
+networks:
+  clapsit-network:
+    driver: bridge
+volumes:
+  mysql-data:

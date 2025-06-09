@@ -32,16 +32,10 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             cd ~/websites/clapsit.com/clapsit-main-server
-            pm2 stop clapsit-main-server
-            rm -rf ./dist
             git checkout main
             git pull
-            pnpm install
-            pnpm run db:migrate
-            pnpm run db:seed
-            pm2 start ecosystem.config.cjs
-            pm2 save
-            pm2 startup
+            rm -rf ./dist
+            pnpm run build:dokcer
           EOF
       
       - name: Update deployment status to success

@@ -9,6 +9,7 @@
     "useDefineForClassFields": true,
     "strict": true,
     "noImplicitThis": true,
+    "noImplicitAny": false,
     "esModuleInterop": true,
     "types": [],
     "allowJs": true,
@@ -17,7 +18,8 @@
     "rootDir": "./src",
     "allowSyntheticDefaultImports": true,
     "lib": [
-      "ES2021", "DOM"
+      "ES2021",
+      "DOM"
     ],
     "paths": {
       "~": [
