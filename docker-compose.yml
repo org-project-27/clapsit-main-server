@@ -1,6 +1,7 @@
 version: '3.8'
 services:
   express:
+    restart: always
     build:
       context: . 
       dockerfile: Dockerfile
@@ -11,6 +12,7 @@ services:
     networks: 
       - clapsit-network
   mysql:
+    restart: always
     container_name: clapsit-main-server-mysql
     image: mysql:8.0
     ports: 

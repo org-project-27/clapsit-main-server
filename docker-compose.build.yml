@@ -2,6 +2,7 @@ version: '3.8'
 services:
   express:
     container_name: clapsit-main-server-express_build
+    restart: always
     ports:
       - "3001:3001"
     depends_on:
